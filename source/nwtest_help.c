@@ -125,9 +125,8 @@ help_client( void )
 "restricted by way of '-4' or '-6' then the value of <srcaddr> must be of\n"
 "the selected type.\n\n"
 
-"If '-sync' is specified then the test is performed in request/response mode.\n"
-"whereas if '-async' is specified the test is performed in streaming mode. The\n"
-"default is '-sync'.\n\n"
+"By default the test is performed in request/response (synchronous) mode but\n"
+"if '-async' is specified the test is performed in streaming mode.\n\n"
 
 "The measurement part of the test will run for <d> seconds with a ramp-up/down\n"
 "of <r> seconds. %d <= <d> <= %d with a default of %d and %d <= <r> <= %d\n"
@@ -201,7 +200,7 @@ help_server( void )
 "by <m> where %'d <= <m> <= %'d. Connections requesting a message size\n"
 "larger than this will be rejected. The default is %'d. This size\n"
 "represents the size of the user data; it excludes network protocol overheads\n"
-"ethernet, IPv4/6 etc.). The size may be specified using a suffix of 'k' to\n"
+"(ethernet, IPv4/6 etc.). The size may be specified using a suffix of 'k' to\n"
 "repesent KB (%'d bytes) or 'm' to represent MB (%'d bytes).\n\n"
 
 "The maximum number of concurrent connections that the server will allow is set\n"
