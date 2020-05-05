@@ -23,7 +23,7 @@
  * Configuration things. These can be changed (with care).
  */
 #define  PROGNAME          "NWTEST"
-#define  VERSION           "1.7"
+#define  VERSION           "1.8"
 
 #define  ALLOW_NODELAY     1
 #define  ALLOW_BUFFSIZE    1

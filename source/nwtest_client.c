@@ -1418,10 +1418,6 @@ displayStats(
     if (  ctxt == NULL  )
         return;
 
-
-    gettimeofday( &pend, NULL );
-    getrusage( RUSAGE_SELF, &rend );
-
     cpu_user = rend.ru_utime.tv_sec - rstart.ru_utime.tv_sec;
     cpu_ususer = rend.ru_utime.tv_usec - rstart.ru_utime.tv_usec;
     if (  cpu_ususer < 0  )
@@ -1769,8 +1765,6 @@ cmdClient(
     }
 
     // Hand off connections to dedicated threads
-    gettimeofday( &pstart, NULL );
-    getrusage( RUSAGE_SELF, &rstart );
     for ( connid = 0; connid < ctxt->nconn; connid++ )
     {
         if (  stopReceived()  )
@@ -1794,6 +1788,8 @@ cmdClient(
     }
     else
     {
+        gettimeofday( &pstart, NULL );
+        getrusage( RUSAGE_SELF, &rstart );
         dlimit = now + (ctxt->dur * 1000000);
         tstate = ptstate = MEASURE;
     }
@@ -1803,7 +1799,14 @@ cmdClient(
     {
         now = getTS( 0 );
         if (  stopReceived()  )
+        {
             tstate = STOP;
+            if (  dlimit && ! ramping  )
+            {
+                getrusage( RUSAGE_SELF, &rend );
+                gettimeofday( &pend, NULL );
+            }
+        }
         else
         if (  ramping  )
         {
@@ -1814,6 +1817,8 @@ cmdClient(
                     ramping = 0;
                     dlimit = now + (ctxt->dur * 1000000);
                     tstate = MEASURE;
+                    gettimeofday( &pstart, NULL );
+                    getrusage( RUSAGE_SELF, &rstart );
                 }
                 else
                     tstate = END;
@@ -1827,9 +1832,15 @@ cmdClient(
                 ramping = 1;
                 rlimit = now + (ctxt->ramp * 1000000);
                 tstate = RAMP;
+                getrusage( RUSAGE_SELF, &rend );
+                gettimeofday( &pend, NULL );
             }
             else
+            {
                 tstate = END;
+                getrusage( RUSAGE_SELF, &rend );
+                gettimeofday( &pend, NULL );
+            }
         }
         if (  tstate != ptstate  )
         {

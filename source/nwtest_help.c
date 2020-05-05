@@ -279,11 +279,11 @@ help_metrics( void )
 "Minimum R/T       - The lowest round trip time across all connections during\n"
 "                    the measurement period (µs).\n\n"
 
-"Average R/T       - The average round trip time across all threads during the\n"
-"                    measurement period (µs).\n\n"
+"Average R/T       - The average round trip time across all connections during\n"
+"                    the measurement period (µs).\n\n"
 
-"Maximum R/T       - The highest round trip time across all threads during the\n"
-"                    measurement period (µs).\n\n"
+"Maximum R/T       - The highest round trip time across all connections during\n"
+"                    the measurement period (µs).\n\n"
 
 "In brief mode the output consists of a single line as follows:\n\n"
 
