@@ -22,14 +22,20 @@ continuous stream of messages to the server and the server simultaneously
 sends a continuous stream of messages to the client.
 
 
-Usage:
-
-   nwtest h[elp] { h[elp] | u[sage] | g[eneral] | c[lient] |
-                   s[erver] | m[etrics] | f[ull] }
-
-   nwtest s[erver] *port* [ -4 | -6 ] [ -h[ost] *h* ] [ -m[sgsz] *m* ] [ -c[onn] *c* ] [ -l[og] *logpath* ]
-
-   nwtest c[lient] *host* *port* [ -s[rc] *srcaddr*] [ -4 | -6 ] [ -a[sync] ] [ -c[onn] *c* ] [ -d[ur] *d* ] [ -r[amp] *r* ] [ -m[sgsz] *m* ] [ -l[og] *logpath* ] [-bsz *bsz* | [ -sbsz *sbsz* ] [ -rbsz *rbsz* ] ] [ -n[odelay] ] [ -b[rief] | -v[erbose] ]
+	Usage:
+	
+	   nwtest h[elp] { h[elp] | u[sage] | g[eneral] | c[lient] |
+	                   s[erver] | m[etrics] | f[ull] }
+	
+	   nwtest s[erver] *port* [ -4 | -6 ] [ -h[ost] *h* ] [ -m[sgsz] *m* ]
+	                          [ -c[onn] *c* ] [ -l[og] *logpath* ]
+	
+	   nwtest c[lient] *host* *port* [ -s[rc] *srcaddr*] [ -4 | -6 ] [ -a[sync] ]
+	                                 [ -c[onn] *c* ] [ -d[ur] *d* ] [ -r[amp] *r* ]
+	                                 [ -m[sgsz] *m* ] [ -l[og] *logpath* ] 
+	                                 [-bsz *bsz* | [ -sbsz *sbsz* ] 
+	                                 [ -rbsz *rbsz* ] ] [ -n[odelay] ] 
+	                                 [ -b[rief] | -v[erbose] ]
 
 **nwtest h[elp] { u[sage] | g[eneral] | c[lient] | s[erver] | m[etrics] | f[ull] }**
 
@@ -48,7 +54,11 @@ The maximum number of concurrent connections that the server will allow is set u
 Normally all output goes to stdout/stderr, but if '-log' is specified then after initial argument parsing any subsequent messages will be written only to *logpath* with microsecond resolution timestamps. A *logpath* of '-' equates to 'stdout' and '--' equates to 'stderr'.
 
 
-**nwtest c[lient] *host* *port* [ -s[rc] *srcaddr*] [ -4 | -6 ] [ -a[sync] ] [ -c[onn] *c* ] [ -d[ur] *d* ] [ -r[amp] *r* ] [ -m[sgsz] *m* ] [ -l[og] *logpath* ] [ -bsz *bsz* | [ -sbsz *sbsz* ] [ -rbsz *rbsz* ] ] [ -n[odelay] ] [ -b[rief] | -v[erbose] ]**
+**nwtest c[lient] *host* *port* [ -s[rc] *srcaddr*] [ -4 | -6 ] [ -a[sync] ] [ -c[onn] *c* ] [ -d[ur] *d* ] [ -r[amp] *r* ]**
+
+**[ -m[sgsz] *m* ] [ -l[og] *logpath* ] [ -bsz *bsz* | [ -sbsz *sbsz* ] [ -rbsz *rbsz* ] ] [ -n[odelay] ]**
+
+**[ -b[rief] | -v[erbose] ]**
 
 Run as a client connecting to a server at host *host* and port *port*. The
 host can be specified as either a host name or an IP address (IPv4 or IPv6).
@@ -163,7 +173,7 @@ Maximum R/T       - The highest round trip time across all threads during the
 
 In brief mode the output consists of a single line as follows:
 
-info: results S,<nconn>,<throughput>,<minrt>,<avgrt>,<maxrt>,<proccpu>,<syscpu>
+**info: results S,nconn,throughput,minrt,avgrt,maxrt,proccpu,syscpu**
 
 _Async (streaming) mode_
 
@@ -197,7 +207,7 @@ Recv throughput   - The receive throughput (application data) aggregated across
 
 In brief mode the output consists of a single line as follows:
 
-info: results A,<nconn>,<sendthroughput>,<recvthroughput>,<proccpu>,<syscpu>
+**info: results A,nconn,sendthroughput,recvthroughput,proccpu,syscpu**
 
 _Network overheads_
 
