@@ -23,7 +23,7 @@
  * Configuration things. These can be changed (with care).
  */
 #define  PROGNAME          "NWTEST"
-#define  VERSION           "1.8"
+#define  VERSION           "2.0"
 
 #define  ALLOW_NODELAY     1
 #define  ALLOW_BUFFSIZE    1
@@ -296,7 +296,7 @@ extern struct rusage rstart, rend;
  * Functions
  */
 
-void help( help_t topic );
+void help( help_t topic, int brief );
 
 void msgFree( thread_t * thread, msg_t ** msg);
 

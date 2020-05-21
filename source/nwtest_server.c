@@ -74,14 +74,14 @@ static char buff[256];
     *ctxt = NULL;
 
     if (  argc < 1  )
-        help( SERVER );
+        help( SERVER, 1 );
 
     if (  ! isInteger( 0, argv[argno] )  )
-        help( SERVER );
+        help( SERVER, 1 );
     ports = argv[argno++];
     port = atoi( ports );
     if (  (port < MIN_PORT) || (port > MAX_PORT)  )
-        help( SERVER );
+        help( SERVER, 0 );
 
     while (  argno < argc )
     {
@@ -89,11 +89,11 @@ static char buff[256];
               ( strcmp( argv[argno], "-h" ) == 0 )  )
         {
             if (  host != NULL  )
-                help( SERVER );
+                help( SERVER, 1 );
             if (  ++argno >= argc  )
-                help( SERVER );
+                help( SERVER, 1 );
             if (  argv[argno][0] == '\0'  )
-                help( SERVER );
+                help( SERVER, 1 );
             host = argv[argno];
         }
         else
@@ -105,14 +105,14 @@ static char buff[256];
         if (  strcmp( argv[argno], "-4" ) == 0  )
         {
             if (  v4only || v6only  )
-                help( SERVER );
+                help( SERVER, 1 );
             v4only = 1;
         }
         else
         if (  strcmp( argv[argno], "-6" ) == 0  )
         {
             if (  v4only || v6only  )
-                help( SERVER );
+                help( SERVER, 1 );
             v6only = 1;
         }
         else
@@ -120,14 +120,14 @@ static char buff[256];
               ( strcmp( argv[argno], "-m" ) == 0 )  )
         {
             if (  msgsz != 0  )
-                help( SERVER );
+                help( SERVER, 1 );
             if (  ++argno >= argc  )
-                help( SERVER );
+                help( SERVER, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( SERVER );
+                help( SERVER, 0 );
             if (  ( tmp < MIN_MSG_SIZE ) ||
                   ( tmp > MAX_MSG_SIZE )  )
-                help( SERVER );
+                help( SERVER, 0 );
             msgsz = (int)tmp;
         }
         else
@@ -135,27 +135,27 @@ static char buff[256];
               ( strcmp( argv[argno], "-c" ) == 0 )  )
         {
             if (  nconn != 0  )
-                help( SERVER );
+                help( SERVER, 1 );
             if (  ++argno >= argc  )
-                help( SERVER );
+                help( SERVER, 1 );
             if (  ! isInteger( 0, argv[argno] )  )
-                help( SERVER );
+                help( SERVER, 0 );
             nconn = atoi( argv[argno] );
             if (  ( nconn < MIN_SRV_CONN ) ||
                   ( nconn > MAX_SRV_CONN )  )
-                help( SERVER );
+                help( SERVER, 0 );
         }
         else
         if (  ( strcmp( argv[argno], "-log" ) == 0 ) ||
               ( strcmp( argv[argno], "-l" ) == 0 )  )
         {
             if (  logpath != NULL  )
-                help( SERVER );
+                help( SERVER, 0 );
             if (  ++argno >= argc  )
-                help( SERVER );
+                help( SERVER, 0 );
             logpath = argv[argno];
             if (  logpath[0] == '\0'  )
-                help( SERVER );
+                help( SERVER, 0 );
             if (  strcmp( logpath, LOG_STDOUT ) == 0  )
                 log = stdout;
        
@@ -172,7 +172,7 @@ static char buff[256];
             setbuf( log, NULL );
         }
         else
-            help( SERVER );
+            help( SERVER, 0 );
         argno += 1;
     }
 

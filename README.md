@@ -3,7 +3,7 @@
 A macOS & Linux utility for performing network performance tests. The tool can be used to measure both throughput and latency for TCP/IP connections and can operate in either synchronous (request/response) or asynchronous (streaming) modes.
 
 ## Documentation
-Please see the [User Guide](./UserGuide.md).
+Please see the file [NwtestHelp.txt](./NwtestHelp.txt).
 
 ## License
 

@@ -65,33 +65,33 @@ cmdHelp(
        )
 {
     if (  argc != 1  )
-        help( HELP );
+        help( HELP, 1 );
 
     if (  ( strcmp( argv[0], "usage" ) == 0 ) ||
           ( strcmp( argv[0], "u" ) == 0 )  )
-        help( USAGE );
+        help( USAGE, 0 );
     else
     if (  ( strcmp( argv[0], "general" ) == 0 ) ||
           ( strcmp( argv[0], "g" ) == 0 )  )
-        help( GENERAL );
+        help( GENERAL, 0 );
     else
     if (  ( strcmp( argv[0], "client" ) == 0 ) ||
           ( strcmp( argv[0], "c" ) == 0 )  )
-        help( CLIENT );
+        help( CLIENT, 0 );
     else
     if (  ( strcmp( argv[0], "server" ) == 0 ) ||
           ( strcmp( argv[0], "s" ) == 0 )  )
-        help( SERVER );
+        help( SERVER, 0 );
     else
     if (  ( strcmp( argv[0], "metrics" ) == 0 ) ||
           ( strcmp( argv[0], "m" ) == 0 )  )
-        help( METRICS );
+        help( METRICS, 0 );
     else
     if (  ( strcmp( argv[0], "full" ) == 0 ) ||
           ( strcmp( argv[0], "f" ) == 0 )  )
-        help( FULL );
+        help( FULL, 0 );
     else
-        help( HELP );
+        help( HELP, 0 );
     return HELP_EXIT;
 } // cmdHelp
 
@@ -106,7 +106,7 @@ main(
     setlocale( LC_ALL, "" );
 
     if (  argc < 2  )
-        help( USAGE );
+        help( USAGE, 1 );
 
     setbuf( stdout, NULL );
 
@@ -122,7 +122,7 @@ main(
           ( strcmp( argv[1], "c" ) == 0 )  )
         ret = cmdClient( argc-2, &argv[2] );
     else
-        help( USAGE );
+        help( USAGE, 1 );
 
     return ret;
 } // main

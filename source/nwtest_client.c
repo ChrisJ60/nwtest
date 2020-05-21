@@ -83,18 +83,18 @@ static char buff[256];
     *ctxt = NULL;
 
     if (  argc < 2  )
-        help( CLIENT );
+        help( CLIENT, 1 );
 
     host = argv[argno++];
     if (  *host == '\0'  )
-        help( CLIENT );
+        help( CLIENT, 1 );
 
     if (  ! isInteger( 0, argv[argno] )  )
-        help( CLIENT );
+        help( CLIENT, 1 );
     ports = argv[argno++];
     port = atoi( ports );
     if (  (port < MIN_PORT) || (port > MAX_PORT)  )
-        help( CLIENT );
+        help( CLIENT, 0 );
 
     while (  argno < argc )
     {
@@ -108,7 +108,7 @@ static char buff[256];
               ( strcmp( argv[argno], "-n" ) == 0 )  )
         {
             if (  nodelay > 0  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             nodelay = 1;
         }
 #endif /* ALLOW_NODELAY */
@@ -117,7 +117,7 @@ static char buff[256];
               ( strcmp( argv[argno], "-a" ) == 0 )  )
         {
             if (  async > 0  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             async = 1;
         }
         else
@@ -125,7 +125,7 @@ static char buff[256];
               ( strcmp( argv[argno], "-v" ) == 0 )  )
         {
             if (  verbose || brief  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             verbose = 1;
         }
         else
@@ -133,21 +133,21 @@ static char buff[256];
               ( strcmp( argv[argno], "-b" ) == 0 )  )
         {
             if (  verbose || brief  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             brief = 1;
         }
         else
         if (  strcmp( argv[argno], "-4" ) == 0  )
         {
             if (  v4only || v6only  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             v4only = 1;
         }
         else
         if (  strcmp( argv[argno], "-6" ) == 0  )
         {
             if (  v4only || v6only  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             v6only = 1;
         }
         else
@@ -155,53 +155,53 @@ static char buff[256];
               ( strcmp( argv[argno], "-s" ) == 0 )  )
         {
             if (  src != NULL  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             src = argv[argno];
             if (  ! isIPAddress( src )  )
-                help( CLIENT );
+                help( CLIENT, 1 );
         }
         else
         if (  strcmp( argv[argno], "-bsz" ) == 0  )
         {
             if (  bsz || sbsz || rbsz  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             bsz = (int)tmp;
         }
         else
         if (  strcmp( argv[argno], "-sbsz" ) == 0  )
         {
             if (  bsz || sbsz  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             sbsz = (int)tmp;
         }
         else
         if (  strcmp( argv[argno], "-rbsz" ) == 0  )
         {
             if (  bsz || rbsz  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             rbsz = (int)tmp;
         }
         else
@@ -209,44 +209,44 @@ static char buff[256];
               ( strcmp( argv[argno], "-d" ) == 0 )  )
         {
             if (  dur > 0  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ! isInteger( 0, argv[argno] )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             dur = atoi( argv[argno] );
             if (  ( dur < MIN_DURATION ) ||
                   ( dur > MAX_DURATION )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
         }
         else
         if (  ( strcmp( argv[argno], "-ramp" ) == 0 ) ||
               ( strcmp( argv[argno], "-r" ) == 0 )  )
         {
             if (  ramp >= 0  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ! isInteger( 0, argv[argno] )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             ramp = atoi( argv[argno] );
             if (  ( ramp < MIN_RAMP ) ||
                   ( ramp > MAX_RAMP )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
         }
         else
         if (  ( strcmp( argv[argno], "-msgsz" ) == 0 ) ||
               ( strcmp( argv[argno], "-m" ) == 0 )  )
         {
             if (  msgsz != 0  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             if (  ( tmp < MIN_MSG_SIZE ) ||
                   ( tmp > MAX_MSG_SIZE )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             msgsz = (int)tmp;
         }
         else
@@ -254,27 +254,27 @@ static char buff[256];
               ( strcmp( argv[argno], "-c" ) == 0 )  )
         {
             if (  nconn != 0  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ! isInteger( 0, argv[argno] )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
             nconn = atoi( argv[argno] );
             if (  ( nconn < MIN_CLT_CONN ) ||
                   ( nconn > MAX_CLT_CONN )  )
-                help( CLIENT );
+                help( CLIENT, 0 );
         }
         else
         if (  ( strcmp( argv[argno], "-log" ) == 0 ) ||
               ( strcmp( argv[argno], "-l" ) == 0 )  )
         {
             if (  logpath != NULL  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             logpath = argv[argno];
             if (  logpath[0] == '\0'  )
-                help( CLIENT );
+                help( CLIENT, 1 );
             if (  strcmp( logpath, LOG_STDOUT ) == 0  )
                 log = stdout;
             else
@@ -290,7 +290,7 @@ static char buff[256];
             setbuf( log, NULL );
         }
         else
-            help( CLIENT );
+            help( CLIENT, 1 );
         argno += 1;
     }
 
@@ -303,16 +303,16 @@ static char buff[256];
         if (  ( sbsz > maxsockbuf ) ||
               ( rbsz > maxsockbuf ) ||
               ( ( sbsz + rbsz ) > maxsockbuf )  )
-            help( CLIENT );
+            help( CLIENT, 0 );
     }
     if (  src != NULL  )
     {
         if (  ( v4only && ! isIPv4Address( src ) ) ||
               ( v6only && ! isIPv6Address( src ) )  )
-            help( CLIENT );
+            help( CLIENT, 1 );
         if (  ( isIPv4Address( host ) && ! isIPv4Address( src ) ) ||
               ( isIPv6Address( host ) && ! isIPv6Address( src ) )  )
-            help( CLIENT );
+            help( CLIENT, 0 );
         if (  isIPv4Address( src )  )
             v4only = 1;
         else
@@ -1553,6 +1553,7 @@ displayStats(
     printMsg( ctxt, 0, "\n" );
     printMsg( ctxt, 0, "Send throughput      : %'ld bytes/s\n", (bsent*1000000)/avgel );
     printMsg( ctxt, 0, "Recv throughput      : %'ld bytes/s\n", (brcvd*1000000)/avgel );
+    printMsg( ctxt, 0, "Average throughput   : %'ld bytes/s\n", ( ( (bsent*1000000)/avgel ) + ( (brcvd*1000000)/avgel ) ) / 2 );
     }
     else
     {

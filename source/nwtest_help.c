@@ -70,13 +70,10 @@ help_general( void )
 
 "\nThis program implements a network response time and throughput test.\n\n"
 
-"The client opens one or more connections to a server and exchanges messages\n"
-"of a given size with the server for a given period of time. At the end of the\n"
-"test various performance metrics are displayed.\n\n"
-
-"The size of the messages exchanged, the duration of the test measurement phase,\n"
-"the amount of load ramp-up and ramp-down time and the number of connections\n"
-"(and hence threads) are all configurable.\n\n"
+"The program can be run as either a client or a server. The client opens one\n"
+"or more connections to a server and exchanges messages of a given size with\n"
+"the server for a given period of time. At the end of the test period, various\n"
+"performance metrics are displayed.\n\n"
 
 "The test can run in two modes. In synchronous (request/response) mode, each\n"
 "connection has a single thread in both the client and the server. Once the\n"
@@ -89,11 +86,20 @@ help_general( void )
 "continuous stream of messages to the server and the server simultaneously\n"
 "sends a continuous stream of messages to the client.\n\n"
 
+"The size of the messages exchanged, the duration of the test measurement phase,\n"
+"the amount of load ramp-up and ramp-down time and the number of connections\n"
+"(and hence threads) are all configurable.\n\n"
+
+"The defaults for the various configurable parameters have been carefully chosen\n"
+"such that using the defaults will generally give a meaningful result. The main\n"
+"parameters that you might vary in normal usage are the message size and the\n"
+"number of connections.\n\n"
+
     );
 } // help_general
 
 static void
-help_client( void )
+help_client( int brief )
 {
     printf(
 
@@ -109,11 +115,16 @@ help_client( void )
 #else /* ! ALLOW_NODELAY */
 "                [ -b[rief] | -v[erbose] ]\n\n"
 #endif /* ! ALLOW_NODELAY */
+    );
+
+    if (   ! brief  )
+    {
+    printf(
 
 "Run as a client connecting to a server at host <host> and port <port>. The\n"
 "host can be specified as either a host name or an IP address (IPv4 or IPv6).\n"
 "If a hostname is specified then you can use the '-4' or '-6' options to limit\n"
-"communication to only IPv4 or IPv6.\n\n"
+"communication to IPv4 or IPv6.\n\n"
 
 "Normally the OS will determine the local source IP address (interface) to use\n"
 "for the outgoing connection, but this can be overridden by specifying an\n"
@@ -138,13 +149,13 @@ help_client( void )
 "size may be specified using a suffix of 'k' to repesent KB (%'d bytes) or\n"
 "'m' to represent MB (%'d bytes).\n\n"
 
-"The number of concurrent connections used is specified by <c> where %d <=\n"
-"<c> <= %d with a default of %d.\n\n"
+"The number of concurrent connections used is specified by <c> where %d <= <c>\n"
+"<= %d with a default of %d.\n\n"
 
-"Normally all output goes to stdout/stderr, but if '-log' is specified\n"
-"then after initial argument parsing any subsequent messages will be\n"
-"written only to <logpath> with microsecond resolution timestamps. A\n"
-"<logpath> of '-' equates to 'stdout' and '--' equates to 'stderr'.\n\n"
+"Normally all output goes to stdout/stderr, but if '-log' is specified then\n"
+"after initial argument parsing any subsequent messages will be written only\n"
+"to <logpath> with microsecond resolution timestamps. A <logpath> of '-'\n"
+"equates to 'stdout' and '--' equates to 'stderr'.\n\n"
 
 #if defined(ALLOW_BUFFSIZE)
 "Normally the OS will allocate the sizes for the socket send and receive\n"
@@ -165,8 +176,8 @@ help_client( void )
 #endif /*  ALLOW_NODELAY */
 
 "Normally only aggregate performance metrics are displayed, but if '-verbose'\n"
-"is specified then per connection metrics are also displayed. If '-brief'\n"
-"is specified then just key metrics are displayed on a single line.\n\n"
+"is specified then per connection metrics are also displayed. If '-brief' is\n"
+"specified then just key metrics are displayed on a single line.\n\n"
 
 , MIN_DURATION, MAX_DURATION, DFLT_DURATION,
   MIN_RAMP, MAX_RAMP, DFLT_RAMP,
@@ -176,12 +187,14 @@ help_client( void )
 #if defined(ALLOW_BUFFSIZE)
   ,MIN_BSZ, MAX_BSZ, getMaxSockBuf(), 1024, 1048576
 #endif /* ALLOW_BUFFSIZE */
-
     );
+
+    }
+
 } // help_client
 
 static void
-help_server( void )
+help_server( int brief )
 {
     printf(
 
@@ -189,12 +202,18 @@ help_server( void )
 "nwtest s[erver] <port> [ -4 | -6 ] [ -h[ost] <h> ] [ -m[sgsz] <m> ]\n"
 "                       [ -c[onn] <c> ] [ -l[og] <logpath> ]\n\n"
 
+    );
+
+    if (  ! brief  )
+    {
+    printf(
+
 "Run as a server on local port <port>. If a specific host is specified (<h>)\n"
 "then bind to the address(es) for that host, otherwise bind to INADDR[6]_ANY.\n"
 "The host can be specified as a hostname or an IP address (IPv4 or IPv6);\n"
 "the address specified must be an address for an interface on the local system.\n"
 "If a hostname is specified then you can use the '-4' or '-6' options to limit\n"
-"communication to only IPv4 or IPv6.\n\n"
+"communication to IPv4 or IPv6.\n\n"
 
 "The maximum message size, in bytes, that the server will accept is specified\n"
 "by <m> where %'d <= <m> <= %'d. Connections requesting a message size\n"
@@ -207,15 +226,16 @@ help_server( void )
 "using <c> where %d <= <c> <= %d. Connections that exceed this number will\n"
 "be rejected. The default is %d.\n\n"
 
-"Normally all output goes to stdout/stderr, but if '-log' is specified\n"
-"then after initial argument parsing any subsequent messages will be\n"
-"written only to <logpath> with microsecond resolution timestamps. A\n"
-"<logpath> of '-' equates to 'stdout' and '--' equates to 'stderr'.\n\n"
+"Normally all output goes to stdout/stderr, but if '-log' is specified then\n"
+"after initial argument parsing any subsequent messages will be written only\n"
+"to <logpath> with microsecond resolution timestamps. A <logpath> of '-'\n"
+"equates to 'stdout' and '--' equates to 'stderr'.\n\n"
 
 , MIN_MSG_SIZE, MAX_MSG_SIZE, DFLT_SRV_MSG_SIZE, 1024, 1048576,
   MIN_SRV_CONN, MAX_SRV_CONN, DFLT_SRV_CONN
-
     );
+
+    }
 } // help_server
 
 static void
@@ -230,60 +250,60 @@ help_metrics( void )
 "receive buffers (sndbsz anb rcvbsz).\n\n"
 
 "The metrics measured and reported by this program for each test mode are\n"
-"as follows.\n\n"
+"as follows; all references to 'data' and 'throughput' refer to application\n"
+"data excluding network overheads.\n\n"
 
 "All modes\n"
 "---------\n\n"
 
-"Elapsed time      - The wall clock elapsed time for the test including\n"
-"                    ramp up/down time.\n\n"
+"Elapsed time       - The wall clock elapsed time for the measurement part\n"
+"                     of the test (excludes ramp up/down time).\n\n"
 
-"User CPU time     - The amount of user CPU time consumed during the\n"
-"                    elapsed time.\n\n"
+"User CPU time      - The amount of user CPU time consumed during the\n"
+"                     elapsed time.\n\n"
 
-"System CPU time   - The amount of system CPU time consumed during the\n"
-"                    elapsed time.\n\n"
+"System CPU time    - The amount of system CPU time consumed during the\n"
+"                     elapsed time.\n\n"
 
-"Total CPU time    - User time plus system time.\n\n"
+"Total CPU time     - User time plus system time.\n\n"
 
-"Process CPU usage - The average CPU usage for the nwtest process during\n"
-"                    the test interval, expressed as a percentage of one\n"
-"                    CPU core.\n\n"
+"Process CPU usage  - The average CPU usage for the nwtest process during\n"
+"                     the elapsed time, expressed as a percentage of one\n"
+"                     CPU core.\n\n"
 
-"System CPU usage  - The average CPU usage for the nwtest process during\n"
-"                    the test interval, expressed as a percentage of total\n"
-"                    available system CPU resources.\n\n"
+"System CPU usage   - The average CPU usage for the nwtest process during\n"
+"                     the elapsed time, expressed as a percentage of total\n"
+"                     available system CPU resources.\n\n"
 
 "Sync (request/response) mode\n"
 "----------------------------\n\n"
 
-"Total messages    - The total number of data messages sent during the\n"
-"                    measurement period. The number of received messages\n"
-"                    is the same.\n\n"
+"Total messages     - The total number of data messages sent during the\n"
+"                     measurement period. The number of received messages\n"
+"                     is the same.\n\n"
 
-"Total data        - The total number of bytes sent during the measurement\n"
-"                    period. The number of received bytes is the same.\n\n"
+"Total data         - The total number of bytes sent during the measurement\n"
+"                     period. The number of received bytes is the same.\n\n"
 
-"Avg measure time  - The average measurement time across all threads (µs).\n\n"
+"Avg measure time   - The average measurement time across all threads (µs).\n\n"
 
-"Start variance    - The maximum difference between the start times of all\n"
-"                    the threads (µs). Only displayed if connections > 1.\n\n"
+"Start variance     - The maximum difference between the start times of all\n"
+"                     the threads (µs). Only displayed if connections > 1.\n\n"
 
-"Run variance      - The maximum difference between the measurement times of\n"
-"                    all the threads (µs). Only displayed if connections > 1.\n\n"
+"Run variance       - The maximum difference between the measurement times of\n"
+"                     all the threads (µs). Only displayed if connections > 1.\n\n"
 
-"Throughput        - The send throughput (application data) aggregated across\n"
-"                    all connections during the measurement period (bytes/\n"
-"                    second).\n\n"
+"Throughput         - The send throughput, aggregated across all connections,\n"
+"                     during the measurement period (bytes/second).\n\n"
 
-"Minimum R/T       - The lowest round trip time across all connections during\n"
-"                    the measurement period (µs).\n\n"
+"Minimum R/T        - The lowest round trip time across all connections during\n"
+"                     the measurement period (µs).\n\n"
 
-"Average R/T       - The average round trip time across all connections during\n"
-"                    the measurement period (µs).\n\n"
+"Average R/T        - The average round trip time across all connections during\n"
+"                     the measurement period (µs).\n\n"
 
-"Maximum R/T       - The highest round trip time across all connections during\n"
-"                    the measurement period (µs).\n\n"
+"Maximum R/T        - The highest round trip time across all connections during\n"
+"                     the measurement period (µs).\n\n"
 
 "In brief mode the output consists of a single line as follows:\n\n"
 
@@ -292,33 +312,33 @@ help_metrics( void )
 "Async (streaming) mode\n"
 "----------------------\n\n"
 
-"Total msg sent    - The total number of messages sent during the measurement\n"
-"                    period.\n\n"
+"Total msg sent     - The total number of messages sent during the measurement\n"
+"                     period.\n\n"
 
-"Total msg rcvd    - The total number of messages received during the measurement\n"
-"                    period.\n\n"
+"Total msg rcvd     - The total number of messages received during the\n"
+"                     measurement period.\n\n"
 
-"Total data sent   - The total number of bytes sent during the measurement\n"
-"                    period.\n\n"
+"Total data sent    - The total number of bytes sent during the measurement\n"
+"                     period.\n\n"
 
-"Total data rcvd   - The total number of bytes received during the measurement\n"
-"                    period.\n\n"
+"Total data rcvd    - The total number of bytes received during the measurement\n"
+"                     period.\n\n"
 
-"Avg measure time  - The average measurement time across all threads (µs).\n\n"
+"Avg measure time   - The average measurement time across all threads (µs).\n\n"
 
-"Start variance    - The maximum difference between the start times of all\n"
-"                    the threads (µs).\n\n"
+"Start variance     - The maximum difference between the start times of all\n"
+"                     the threads (µs).\n\n"
 
-"Run variance      - The maximum difference between the measurement times of\n"
-"                    all the threads (µs).\n\n"
+"Run variance       - The maximum difference between the measurement times of\n"
+"                     all the threads (µs).\n\n"
 
-"Send throughput   - The send throughput (application data) aggregated across\n"
-"                    all connections during the measurement period (bytes/\n"
-"                    second).\n\n"
+"Send throughput    - The send throughput, aggregated across all connections,\n"
+"                     during the measurement period (bytes/second).\n\n"
 
-"Recv throughput   - The receive throughput (application data) aggregated across\n"
-"                    all connections during the measurement period (bytes/\n"
-"                    second).\n\n"
+"Recv throughput    - The receive throughput, aggregated across all connections,\n"
+"                     during the measurement period (bytes/second).\n\n"
+
+"Average throughput - The average of the send and receive throughputs.\n\n"
 
 "In brief mode the output consists of a single line as follows:\n\n"
 
@@ -329,32 +349,33 @@ help_metrics( void )
 
 "The message size that you specify defines the size of the 'application data'\n"
 "in each message sent or received. The actual amount of data for each message\n"
-"will be larger than this due to various network protocol related overheads.\n\n"
+"will be larger than this due to various network and protocol related overheads.\n\n"
 
 "For IPv4, there is at least 28 bytes of overhead per message and in unusual\n"
 "cases this may be as much as 36 bytes. In addition the TCPv4 header is another\n"
-"24 bytes  In most cases for this program the IPv4 packet size will therefore\n"
-"be <message size> + 52 bytes.\n\n"
+"24 bytes. In most cases, for this program, the IPv4 packet size will be <message\n"
+"size> + 52 bytes.\n\n"
 
 "For IPv6/TCP, there is at least 72 bytes of overhead per message and in unusual\n"
 "cases this may be more due to additional header fields (each is 8 bytes). In\n"
-"most cases for this program the IPv6 packet size will be <message size> + 72\n"
+"most cases, for this program, the IPv6 packet size will be <message size> + 72\n"
 "bytes.\n\n"
 
-"For Ethernet the Maximum Transmission Unit (MTU) is 1500 bytes. Each IP packet\n"
-"will be sent as a sequence of one or more Ethernet frames. Each frame has some\n"
-"overhead; normally this is 38 bytes but if 802.1q VLANs are used it will be 42\n"
-"bytes.\n\n"
+"For Ethernet the standard Maximum Transmission Unit (MTU) is 1500 bytes. Each\n"
+"IP packet will be sent as a sequence of one or more Ethernet frames. Each frame\n"
+"has some overhead; normally this is 38 bytes but if 802.1q VLANs are being used\n"
+"it will be 42 bytes.\n\n"
 
-"For WiFi the Maximum Transmission Unit (MTU) is 1500 bytes. Each IP packet\n"
-"will be sent as a sequence of one or more WiFi frames. Each frame has some\n"
-"overhead; normally this is 36 bytes but it may be as much as 44 bytes.\n\n"
+"For WiFi the standard Maximum Transmission Unit (MTU) is 1500 bytes. Each IP\n"
+"packet will be sent as a sequence of one or more WiFi frames. Each frame has\n"
+"some overhead; normally this is 36 bytes but it may be as much as 44 bytes.\n\n"
 
-"To give this some context, with the default message size of 1024 bytes the IPv4\n"
-"packet size will be 1076 bytes and the IPv6 packet size will be 1096 bytes.\n"
+"To give this some context, with the default test message size of 1024 bytes the\n"
+"IPv4 packet size will be 1076 bytes and the IPv6 packet size will be 1096 bytes.\n"
 "Both will therefore fit into a single Ethernet/WiFi frame. The associated\n"
-"Ethernet frame will be 1114 bytes for IPv4 and 1134 bytes for IPv6. With a\n"
-"1 Gb Ethernet network the maximum theoretical throughput will therefore be\n"
+"Ethernet frame will be 1114 bytes for IPv4 and 1134 bytes for IPv6.\n\n"
+
+"With a 1 Gbit/s Ethernet network, the maximum theoretical throughput will be\n"
 "112,208 frames/s for IPv4 and 110,229 frames/s for IPv6. This translates to\n"
 "a theoretical maximum application data rate of 109.5 Mbyte/s for IPv4 and\n"
 "107.6 Mbyte/s for IPv6.\n\n"
@@ -368,13 +389,13 @@ help_full( void )
     help_general();
     help_usage();
     help_help();
-    help_server();
-    help_client();
+    help_server( 0 );
+    help_client( 0 );
     help_metrics();
 } // help_full
 
 void
-help( help_t topic )
+help( help_t topic, int brief )
 {
     printf( "\nVersion %s\n", VERSION );
 
@@ -390,10 +411,10 @@ help( help_t topic )
             help_general();
             break;
         case SERVER:
-            help_server();
+            help_server( brief );
             break;
         case CLIENT:
-            help_client();
+            help_client( brief );
             break;
         case METRICS:
             help_metrics();
