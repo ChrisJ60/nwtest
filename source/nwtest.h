@@ -23,10 +23,14 @@
  * Configuration things. These can be changed (with care).
  */
 #define  PROGNAME          "NWTEST"
-#define  VERSION           "2.0"
+#define  VERSION           "2.2"
 
+#define  ENABLE_DEBUG      1
 #define  ALLOW_NODELAY     1
+#define  ALLOW_QUICKACK    1
 #define  ALLOW_BUFFSIZE    1
+#define  USE_TCPECN        1 /* macOS only */
+
 #define  MAX_MSG_SIZE      1048576
 #define  DFLT_CLT_MSG_SIZE 1024
 #define  DFLT_SRV_MSG_SIZE MAX_MSG_SIZE
@@ -50,6 +54,25 @@
  * Other stuff (do not change).
  */
 
+#if defined(ENABLE_DEBUG)
+#define DEBUG( lvl, dbglvl, cond, action ) \
+{ \
+    if ( (dbglvl & lvl) && ( cond ) ) \
+    { \
+        action; \
+    } \
+} 
+#else /* ! ENABLE_DEBUG */
+#define DEBUG( lvl, dbglvl, cond, action )
+#endif /* ! ENABLE_DEBUG */
+
+#define  DEBUG_NONE        0x00
+#define  DEBUG_SEND        0x01
+#define  DEBUG_RECV        0x02
+#define  DEBUG_CONNECT     0x04
+#define  DEBUG_OTHER       0x08
+#define  DEBUG_ALL         0xff
+
 #define  LOG_STDOUT        "-"
 #define  LOG_STDERR        "--"
 #define  HELP_EXIT         100
@@ -58,6 +81,8 @@
 #define  MB_MULT           (KB_MULT * KB_MULT)
 #define  NODELAY_OFF       0
 #define  NODELAY_ON        1
+#define  QUICKACK_OFF      0
+#define  QUICKACK_ON       1
 #define  MAX_MSG_WAIT      10
 #define  MIN_PORT          1024
 #define  MAX_PORT          65535
@@ -139,7 +164,7 @@ struct s_connmsg
     msghdr_t    hdr;
     uint8       async;
     uint8       nodelay;
-    uint8       filler;
+    uint8       quickack;
     uint32      msgsz;
     uint32      sbsz;
     uint32      rbsz;
@@ -231,6 +256,7 @@ struct s_conn
     int               connid;
     int               msgsz;
     int               nodelay;
+    int               quickack;
     volatile int      busy;
     volatile int      ready;
     long              startts;
@@ -265,10 +291,13 @@ struct s_context
     int               v4only;
     int               v6only;
     int               nodelay;
+    int               quickack;
     int               nconn;
     int               maxsockbuf;
-    int               sbsz;
-    int               rbsz;
+    int               srvsbsz;
+    int               srvrbsz;
+    int               cltsbsz;
+    int               cltrbsz;
     char            * error;
     int               debug;
     int               naddr;
@@ -277,6 +306,9 @@ struct s_context
     struct addrinfo * v4addr;
     struct addrinfo * v6addr;
     struct addrinfo * srcaddr;
+    struct addrinfo * srvaddr;
+    struct sockaddr * cltaddr;
+    int               lcltaddr;
     int             * lsocks;
     int               maxsocket;
     fd_set            lfds;
@@ -296,6 +328,8 @@ extern struct rusage rstart, rend;
  * Functions
  */
 
+long hexConvert( char * s );
+
 void help( help_t topic, int brief );
 
 void msgFree( thread_t * thread, msg_t ** msg);
@@ -314,8 +348,9 @@ conn_t * connAlloc( context_t * ctxt, int connid );
 
 context_t * contextAlloc( cs_t cs, tmode_t mode, char * host, int port, 
                           char * src, int msgsz, int ramp, int dur, int verbose,
-                          int brief, int nconn, int v4only, int v6only, int sbsz,
-                          int rbsz, FILE * log, int debug );
+                          int brief, int nconn, int v4only, int v6only, 
+                          int srvsbsz, int srvrbsz, int cltsbsz, int cltrbsz,
+                          FILE * log, int debug );
 
 struct addrinfo * copyAddrInfo( struct addrinfo * addr );
 

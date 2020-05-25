@@ -63,13 +63,18 @@ static char buff[256];
     int               async = 0;
     int               dur = 0;
     int               nodelay = 0;
-    int               bsz = 0;
+    int               quickack = 0;
     int               sbsz = 0;
     int               rbsz = 0;
+    int               srvsbsz = 0;
+    int               srvrbsz = 0;
+    int               cltsbsz = 0;
+    int               cltrbsz = 0;
     int               verbose = 0;
     int               brief = 0;
     int               ramp = -1;
     int               debug = 0;
+    int               fdebug = 0;
     int               maxsockbuf = 0;
     long              tmp;
     int               sock;
@@ -98,12 +103,32 @@ static char buff[256];
 
     while (  argno < argc )
     {
+#if defined(ENABLE_DEBUG)
         if (  strcmp( argv[argno], "-debug" ) == 0  )
         {
-            debug = 1;
+            if (  fdebug  )
+            {
+                fprintf( stderr, "error: multiple '-debug' options not allowed\n" );
+                exit( 99 );
+            }
+            if (  ++argno >= argc  )
+            {
+                fprintf( stderr, "error: missing value for '-debug' option\n" );
+                exit( 99 );
+            }
+            tmp = hexConvert( argv[argno] );
+            if (  ( tmp < DEBUG_NONE ) ||
+                  ( tmp > DEBUG_ALL )  )
+            {
+                fprintf( stderr, "error: invalid value for '-debug' option\n" );
+                exit( 99 );
+            }
+            debug = (int)tmp;
+            fdebug = 1;
         }
-#if defined(ALLOW_NODELAY)
         else
+#endif /* ENABLE_DEBUG */
+#if defined(ALLOW_NODELAY)
         if (  ( strcmp( argv[argno], "-nodelay" ) == 0 ) ||
               ( strcmp( argv[argno], "-n" ) == 0 )  )
         {
@@ -111,8 +136,18 @@ static char buff[256];
                 help( CLIENT, 1 );
             nodelay = 1;
         }
-#endif /* ALLOW_NODELAY */
         else
+#endif /* ALLOW_NODELAY */
+#if defined(ALLOW_QUICKACK)
+        if (  ( strcmp( argv[argno], "-quickack" ) == 0 ) ||
+              ( strcmp( argv[argno], "-q" ) == 0 )  )
+        {
+            if (  quickack > 0  )
+                help( CLIENT, 1 );
+            quickack = 1;
+        }
+        else
+#endif /* ALLOW_QUICKACK */
         if (  ( strcmp( argv[argno], "-async" ) == 0 ) ||
               ( strcmp( argv[argno], "-a" ) == 0 )  )
         {
@@ -163,24 +198,11 @@ static char buff[256];
                 help( CLIENT, 1 );
         }
         else
-        if (  strcmp( argv[argno], "-bsz" ) == 0  )
-        {
-            if (  bsz || sbsz || rbsz  )
-                help( CLIENT, 1 );
-            if (  ++argno >= argc  )
-                help( CLIENT, 1 );
-            if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT, 0 );
-            if (  ( tmp < MIN_BSZ ) ||
-                  ( tmp > MAX_BSZ )  )
-                help( CLIENT, 0 );
-            bsz = (int)tmp;
-        }
-        else
+#if defined(ALLOW_BUFFSIZE)
         if (  strcmp( argv[argno], "-sbsz" ) == 0  )
         {
-            if (  bsz || sbsz  )
-                help( CLIENT, 0 );
+            if (  sbsz || cltsbsz || srvsbsz  )
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
@@ -193,7 +215,7 @@ static char buff[256];
         else
         if (  strcmp( argv[argno], "-rbsz" ) == 0  )
         {
-            if (  bsz || rbsz  )
+            if (  rbsz || cltrbsz || srvrbsz  )
                 help( CLIENT, 1 );
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
@@ -205,6 +227,63 @@ static char buff[256];
             rbsz = (int)tmp;
         }
         else
+        if (  strcmp( argv[argno], "-srvsbsz" ) == 0  )
+        {
+            if (  sbsz || srvsbsz  )
+                help( CLIENT, 1 );
+            if (  ++argno >= argc  )
+                help( CLIENT, 1 );
+            if (  valueConvert( argv[argno], &tmp )  )
+                help( CLIENT, 0 );
+            if (  ( tmp < MIN_BSZ ) ||
+                  ( tmp > MAX_BSZ )  )
+                help( CLIENT, 0 );
+            srvsbsz = (int)tmp;
+        }
+        else
+        if (  strcmp( argv[argno], "-srvrbsz" ) == 0  )
+        {
+            if (  rbsz || srvrbsz  )
+                help( CLIENT, 1 );
+            if (  ++argno >= argc  )
+                help( CLIENT, 1 );
+            if (  valueConvert( argv[argno], &tmp )  )
+                help( CLIENT, 0 );
+            if (  ( tmp < MIN_BSZ ) ||
+                  ( tmp > MAX_BSZ )  )
+                help( CLIENT, 0 );
+            srvrbsz = (int)tmp;
+        }
+        else
+        if (  strcmp( argv[argno], "-cltsbsz" ) == 0  )
+        {
+            if (  sbsz || cltsbsz  )
+                help( CLIENT, 1 );
+            if (  ++argno >= argc  )
+                help( CLIENT, 1 );
+            if (  valueConvert( argv[argno], &tmp )  )
+                help( CLIENT, 0 );
+            if (  ( tmp < MIN_BSZ ) ||
+                  ( tmp > MAX_BSZ )  )
+                help( CLIENT, 0 );
+            cltsbsz = (int)tmp;
+        }
+        else
+        if (  strcmp( argv[argno], "-cltrbsz" ) == 0  )
+        {
+            if (  rbsz || cltrbsz  )
+                help( CLIENT, 1 );
+            if (  ++argno >= argc  )
+                help( CLIENT, 1 );
+            if (  valueConvert( argv[argno], &tmp )  )
+                help( CLIENT, 0 );
+            if (  ( tmp < MIN_BSZ ) ||
+                  ( tmp > MAX_BSZ )  )
+                help( CLIENT, 0 );
+            cltrbsz = (int)tmp;
+        }
+        else
+#endif /* ALLOW_BUFFSIZE */
         if (  ( strcmp( argv[argno], "-dur" ) == 0 ) ||
               ( strcmp( argv[argno], "-d" ) == 0 )  )
         {
@@ -295,16 +374,26 @@ static char buff[256];
     }
 
     // Sanity checks
-    if (  bsz  )
-        sbsz = rbsz = bsz;
-    if (  sbsz || rbsz  )
+    if (  sbsz )
+        cltsbsz = srvsbsz = sbsz;
+    if (  rbsz )
+        cltrbsz = srvrbsz = rbsz;
+    maxsockbuf = getMaxSockBuf();
+    if (  srvsbsz || srvrbsz  )
     {
-        maxsockbuf = getMaxSockBuf();
-        if (  ( sbsz > maxsockbuf ) ||
-              ( rbsz > maxsockbuf ) ||
-              ( ( sbsz + rbsz ) > maxsockbuf )  )
+        if (  ( srvsbsz > maxsockbuf ) ||
+              ( srvrbsz > maxsockbuf ) ||
+              ( ( srvsbsz + srvrbsz ) > maxsockbuf )  )
             help( CLIENT, 0 );
     }
+    if (  cltsbsz || cltrbsz  )
+    {
+        if (  ( cltsbsz > maxsockbuf ) ||
+              ( cltrbsz > maxsockbuf ) ||
+              ( ( cltsbsz + cltrbsz ) > maxsockbuf )  )
+            help( CLIENT, 0 );
+    }
+
     if (  src != NULL  )
     {
         if (  ( v4only && ! isIPv4Address( src ) ) ||
@@ -331,7 +420,8 @@ static char buff[256];
         dur = DFLT_DURATION;
 
     *ctxt = contextAlloc( TCLIENT, async?ASYNC:SYNC, host, port, src, msgsz, ramp, dur, 
-                          verbose, brief, nconn, v4only, v6only, sbsz, rbsz, log, debug );
+                          verbose, brief, nconn, v4only, v6only, srvsbsz, srvrbsz,
+                          cltsbsz, cltrbsz, log, debug );
     if (  *ctxt == NULL  )
     {
         fprintf( stderr, "error: memory allocation failed (context)\n" );
@@ -341,6 +431,10 @@ static char buff[256];
     if (  nodelay  )
         (*ctxt)->nodelay = NODELAY_ON;
 #endif /* ALLOW_NODELAY */
+#if defined(ALLOW_QUICKACK)
+    if (  quickack  )
+        (*ctxt)->quickack = QUICKACK_ON;
+#endif /* ALLOW_QUICKACK */
 
     // Validate 'src' if specified
     if (  src != NULL  )
@@ -417,7 +511,7 @@ static char buff[256];
 } // parseArgsClient
 
 /*
- * Checks if all threads have azero return code.
+ * Checks if all threads have a zero return code.
  */
 
 static int
@@ -508,14 +602,13 @@ cltRecvMsg(
     }
     if (  msg->hdr.seqno != reqseqno  )
     {
-        printErr( ctxt, 1, "error: %cthread %d/%d expecting seqno %u, received ud\n",
+        printErr( ctxt, 1, "error: %cthread %d/%d expecting seqno %u, received %u\n",
                   sr, connid, tno, reqseqno, msg->hdr.seqno );
         return 6;
     }
 
-    if (  ( ctxt->debug ) && ( msg->hdr.msgtype != MSG_DATA ) && ( msg->hdr.msgtype != MSG_DATA_ACK )  )
-        printErr( ctxt, 1, "DEBUG: %cthread %d/%d received %s\n",
-                  sr, connid, tno, msgTypeStr( (int)msg->hdr.msgtype ) );
+    DEBUG( DEBUG_RECV, ctxt->debug, ( ( msg->hdr.msgtype != MSG_DATA ) && ( msg->hdr.msgtype != MSG_DATA_ACK ) ),
+           printErr( ctxt, 1, "DEBUG: %cthread %d/%d received %s\n", sr, connid, tno, msgTypeStr( (int)msg->hdr.msgtype ) ) )
 
     return 0;
 } // cltRecvMsg
@@ -569,8 +662,7 @@ receiverThread(
     datasz = msgsz - offsetof( mdata_t, data );
     mdata = (mdata_t *)thread->rcvbuff;
 
-    if (  ctxt->debug  )
-        printErr( ctxt, 1, "DEBUG: receiver thread %d/%d started\n", connid, tno );
+    DEBUG( DEBUG_RECV, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: receiver thread %d/%d started\n", connid, tno ) )
 
     if (  thread->state == STOP  )
     {
@@ -648,8 +740,8 @@ receiverThread(
         retval = (void *)((unsigned long)ret);
 
 fini:
-    if (  ctxt->debug  )
-        printErr( ctxt, 1, "DEBUG: receiver thread %d/%d terminated(%ld)\n", connid, tno, (long)retval );
+    DEBUG( DEBUG_RECV, ctxt->debug, 1, 
+           printErr( ctxt, 1, "DEBUG: receiver thread %d/%d terminated(%ld)\n", connid, tno, (long)retval ) )
     if (  thread != NULL  )
         thread->state = FINISHED;
     return retval;
@@ -678,8 +770,8 @@ senderThread(
     int          done = 0;
     int          connid;
     int          tno;
-    uint32       sbsz = 0;
-    uint32       rbsz = 0;
+    uint32       srvsbsz = 0;
+    uint32       srvrbsz = 0;
     uint32       sseqno = 0;
     uint32       rseqno = 0;
     uint64       csrcats;
@@ -717,8 +809,8 @@ senderThread(
     msgsz = ctxt->msgsz;
     datasz = msgsz - offsetof( mdata_t, data );
     async = ( ctxt->mode == ASYNC );
-    sbsz = (uint32)ctxt->sbsz;
-    rbsz = (uint32)ctxt->rbsz;
+    srvsbsz = (uint32)ctxt->srvsbsz;
+    srvrbsz = (uint32)ctxt->srvrbsz;
     mconn = (mconn_t *)msgAlloc( thread, MSG_CONN );
     if (  mconn == NULL  )
     {
@@ -745,13 +837,13 @@ senderThread(
     mdiscack = (mdiscack_t *)thread->rcvbuff;
 
     // Send the connection message
-    if (  ctxt->debug  )
-        printErr( ctxt, 1, "DEBUG: Sthread %d/%d sending MSG_CONN\n", connid, tno );
+    DEBUG( DEBUG_SEND, ctxt->debug, 1, 
+           printErr( ctxt, 1, "DEBUG: Sthread %d/%d sending MSG_CONN\n", connid, tno ) )
     mconn->hdr.seqno = HTON32( sseqno );
     sseqno++;
     mconn->async = HTON8( async );
-    mconn->sbsz = HTON32( sbsz );
-    mconn->rbsz = HTON32( rbsz );
+    mconn->sbsz = HTON32( srvsbsz );
+    mconn->rbsz = HTON32( srvrbsz );
     csrcats = getTS( 0 );
     mconn->srcats = HTON64( csrcats );
     ret = sendMsg( ctxt, conn->rwsock, (msg_t *)mconn, &errmsg );
@@ -790,8 +882,8 @@ senderThread(
     }
 
     ssrcats =  mconnack->srcats;
-    if (  ctxt->debug  )
-        printErr( ctxt, 1, "DEBUG: csrcats = %lu, ssrcats = %lu\n", csrcats, ssrcats );
+    DEBUG( DEBUG_RECV, ctxt->debug, 1, 
+           printErr( ctxt, 1, "DEBUG: csrcats = %lu, ssrcats = %lu\n", csrcats, ssrcats ) )
 
     if (  async  )
     {
@@ -917,8 +1009,8 @@ senderThread(
     }
 
     // Send the disconnection message
-    if (  ctxt->debug  )
-        printErr( ctxt, 1, "DEBUG: Sthread %d/%d sending MSG_DISC\n", connid, tno );
+    DEBUG( DEBUG_SEND, ctxt->debug, 1, 
+           printErr( ctxt, 1, "DEBUG: Sthread %d/%d sending MSG_DISC\n", connid, tno ) )
     mdisc->hdr.seqno = HTON32( sseqno );
     sseqno++;
     ret = sendMsg( ctxt, conn->rwsock, (msg_t *)mdisc, &errmsg );
@@ -963,9 +1055,8 @@ senderThread(
     printMsg( ctxt, 1, "info: disconnected (conn = %d)\n", connid );
 
 fini:
-    if (  ctxt->debug  )
-        printMsg( ctxt, 1, "DEBUG: sender thread %d/%d terminated (%ld)\n",
-                  connid, tno, (long)retval );
+    DEBUG( DEBUG_SEND, ctxt->debug, 1, 
+           printMsg( ctxt, 1, "DEBUG: sender thread %d/%d terminated (%ld)\n", connid, tno, (long)retval ) )
 
     if (  async && (rthread != NULL)  )
     {
@@ -991,8 +1082,7 @@ fini:
 } // senderThread
 
 /*
- * Connects to the host. If retaddr is NULL, tries addresses in sequence until success
- * and returns the one that succeeded otherwise only tried the one passed in *retaddr.
+ * Connects to the target host.
  */
 
 static int
@@ -1004,6 +1094,7 @@ clientConnect(
 {
     struct addrinfo * addr = NULL;
     int sock = -1, ret = 0;
+    long onoff = 1;
 
     if (  ctxt == NULL  )
         return sock;
@@ -1013,7 +1104,7 @@ clientConnect(
         sock = socket( (*conaddr)->ai_family, (*conaddr)->ai_socktype, (*conaddr)->ai_protocol );
         if (  sock >= 0  )
         {
-            if (  ctxt->debug  )
+            DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
             {
                 logLock( ctxt );
                 printErr( ctxt, 0, "DEBUG: connecting to '" );
@@ -1027,39 +1118,47 @@ clientConnect(
                 }
                 fprintf( getStdErr( ctxt ), "\n" );
                 logUnlock( ctxt );
-            }
+            } )
             if (  srcaddr != NULL  )
             {
                 errno = 0;
                 if (  bind( sock, srcaddr->ai_addr, srcaddr->ai_addrlen )  )
                 {
-                    if (  ctxt->debug  )
+                    DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
                     {
                         logLock( ctxt );
                         printErr( ctxt, 0, "DEBUG: bind() failed for address '" );
                         printIPaddress( getStdErr( ctxt), srcaddr->ai_addr, srcaddr->ai_addrlen, 1 );
                         fprintf( getStdErr( ctxt), "'\n" );
                         logUnlock( ctxt );
-                    }
+                    } )
                     close( sock );
                     sock = -1;
                     ret = 1;
                 }
             }
+#if defined( USE_TCPECN ) && defined( TCP_ENABLE_ECN )
+            errno = 0;
+            if (  setsockopt( sock, IPPROTO_TCP, TCP_ENABLE_ECN, (void *)&onoff, sizeof( onoff ) )  )
+            {
+                DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
+                       printErr( ctxt, 1, "DEBUG: failed to enable ECN: %d (%s)\n", errno, strerror(errno) ) )
+            }
+#endif /* USE_TCP_ECN */
             if (  ret == 0  )
             {
                 errno = 0;
                 ret = connect( sock, (*conaddr)->ai_addr, (*conaddr)->ai_addrlen );
                 if (   ret  )
                 {
-                    if (  ctxt->debug  )
-                        printErr( ctxt, 1, "DEBUG: connection failed\n" );
+                    DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection failed\n" ) )
                     close( sock );
                     sock = -1;
                 }
                 else
-                if (  ctxt->debug  )
-                    printErr( ctxt, 1, "DEBUG: connection successful (%d)\n", sock );
+                {
+                    DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection successful (%d)\n", sock ) );
+                }
             }
         }
         return sock;
@@ -1080,7 +1179,7 @@ clientConnect(
             sock = socket( addr->ai_family, addr->ai_socktype, addr->ai_protocol );
             if (  sock >= 0  )
             {
-                if (  ctxt->debug  )
+                DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
                 {
                     logLock( ctxt );
                     printErr( ctxt, 0, "DEBUG: attempting connection to '" );
@@ -1094,20 +1193,20 @@ clientConnect(
                     }
                     fprintf( getStdErr( ctxt ), "\n" );
                     logUnlock( ctxt );
-                }
+                } )
                 if (  srcaddr != NULL  )
                 {
                     errno = 0;
                     if (  bind( sock, srcaddr->ai_addr, srcaddr->ai_addrlen )  )
                     {
-                        if (  ctxt->debug  )
+                        DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
                         {
                             logLock( ctxt );
                             printErr( ctxt, 0, "DEBUG: bind() failed for address '" );
                             printIPaddress( getStdErr( ctxt), srcaddr->ai_addr, srcaddr->ai_addrlen, 1 );
                             fprintf( getStdErr( ctxt), "'\n" );
                             logUnlock( ctxt );
-                        }
+                        } )
                         close( sock );
                         sock = -1;
                         ret = 1;
@@ -1119,15 +1218,16 @@ clientConnect(
                     ret = connect( sock, addr->ai_addr, addr->ai_addrlen );
                     if (  ! ret  )
                     {
-                        if (  ctxt->debug  )
-                            printErr( ctxt, 1, "DEBUG: connection successful (%d)\n", sock );
+                        DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
+                            printErr( ctxt, 1, "DEBUG: connection successful (%d)\n", sock ) )
                         if (  conaddr != NULL  )
                             *conaddr = addr;
                         return sock;
                     }
                     else
-                    if (  ctxt->debug  )
-                        printErr( ctxt, 1, "DEBUG: connection failed\n" );
+                    {
+                        DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection failed\n" ) );
+                    }
                 }
             }
             addr = addr->ai_next;
@@ -1146,6 +1246,7 @@ clientConnect(
             sock = socket( addr->ai_family, addr->ai_socktype, addr->ai_protocol );
             if (  sock >= 0  )
             {
+                DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
                 if (  ctxt->debug  )
                 {
                     logLock( ctxt );
@@ -1160,20 +1261,20 @@ clientConnect(
                     }
                     fprintf( getStdErr( ctxt ), "\n" );
                     logUnlock( ctxt );
-                }
+                } )
                 if (  srcaddr != NULL  )
                 {
                     errno = 0;
                     if (  bind( sock, srcaddr->ai_addr, srcaddr->ai_addrlen )  )
                     {
-                        if (  ctxt->debug  )
+                        DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
                         {
                             logLock( ctxt );
                             printErr( ctxt, 0, "DEBUG: bind() failed for address '" );
                             printIPaddress( getStdErr( ctxt), srcaddr->ai_addr, srcaddr->ai_addrlen, 1 );
                             fprintf( getStdErr( ctxt), "'\n" );
                             logUnlock( ctxt );
-                        }
+                        } )
                         close( sock );
                         sock = -1;
                         ret = 1;
@@ -1185,15 +1286,15 @@ clientConnect(
                     ret = connect( sock, addr->ai_addr, addr->ai_addrlen );
                     if (  ! ret  )
                     {
-                        if (  ctxt->debug  )
-                            printErr( ctxt, 1, "DEBUG: connection successful (%d)\n", sock );
+                        DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection successful (%d)\n", sock ) )
                         if (  conaddr != NULL  )
                             *conaddr = addr;
                         return sock;
                     }
                     else
-                    if (  ctxt->debug  )
-                        printErr( ctxt, 1, "DEBUG: connection failed\n" );
+                    {
+                        DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection failed\n" ) );
+                    }
                 }
             }
             addr = addr->ai_next;
@@ -1237,14 +1338,12 @@ threadReaper(
         if (  ( thread->state == FINISHED ) || 
               ( ( thread->state != DEFUNCT ) && pthread_kill(thread->tid,0) )  )
         {
-            if (  ctxt->debug  )
-                printErr( ctxt, 1, "DEBUG: reaping thread %d/%d\n", connid, tno );
+            DEBUG( DEBUG_OTHER, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: reaping thread %d/%d\n", connid, tno ) )
             ret = pthread_join(thread->tid,&retval);
-            if (  ret && ctxt->debug  )
-                printErr( ctxt, 1, "DEBUG: pthread_join() failed (%d) for thread %d/%d\n", ret, connid, tno );
-            if (  ctxt->debug  )
-                printErr( ctxt, 1, "DEBUG: thread %d/%d returned %ld\n", connid, tno, (long)retval );
-            else
+            DEBUG( DEBUG_OTHER, ctxt->debug, ret, 
+                   printErr( ctxt, 1, "DEBUG: pthread_join() failed (%d) for thread %d/%d\n", ret, connid, tno ) )
+            DEBUG( DEBUG_OTHER, ctxt->debug, 1,
+                   printErr( ctxt, 1, "DEBUG: thread %d/%d returned %ld\n", connid, tno, (long)retval ) )
             if (  retval != NULL  )
                 printErr( ctxt, 1, "error: thread %d/%d returned error %ld\n", connid, tno, (long)retval );
             memset( (void *)&(thread->tid), 0, sizeof(pthread_t) );
@@ -1269,8 +1368,8 @@ threadReaper(
         }
         if (  thread->state == DEFUNCT  )
         {
-            if (  ctxt->debug  )
-                printErr( ctxt, 1, "DEBUG: dequeueing thread %d/%d\n", connid, tno );
+            DEBUG( DEBUG_OTHER, ctxt->debug, 1,
+                   printErr( ctxt, 1, "DEBUG: dequeueing thread %d/%d\n", connid, tno ) )
             dequeueThread( ctxt, &thread );
         }
         else
@@ -1292,6 +1391,8 @@ handoffConn(
 {
     int ret = 0;
     conn_t * conn = NULL;
+    long nodelay;
+    long quickack;
     struct timeval rcvto = { MAX_MSG_WAIT, 0 };
     struct timeval sndto = { MAX_MSG_WAIT, 0 };
 
@@ -1307,10 +1408,19 @@ handoffConn(
     conn->v6peer = ( lsrvaddr == sizeof(struct sockaddr_in6) );
     conn->error = NULL;
     conn->rwsock = srvsock;
+    nodelay = conn->nodelay = ctxt->nodelay;
+    quickack = conn->quickack = ctxt->quickack;
     if (  setsockopt( conn->rwsock, SOL_SOCKET, SO_RCVTIMEO, (void *)&rcvto, sizeof( struct timeval ) ) ||
 #if defined(ALLOW_NODELAY)
-          setsockopt( conn->rwsock, IPPROTO_TCP, TCP_NODELAY, (void *)&(ctxt->nodelay), sizeof( int ) ) ||
+          setsockopt( conn->rwsock, IPPROTO_TCP, TCP_NODELAY, (void *)&nodelay, sizeof( nodelay ) ) ||
 #endif /* ALLOW_NODELAY */
+#if defined(ALLOW_QUICKACK)
+#if defined(LINUX)
+          setsockopt( conn->rwsock, IPPROTO_TCP, TCP_QUICKACK, (void *)&quickack, sizeof( quickack ) ) ||
+#else /* macOS */
+          setsockopt( conn->rwsock, IPPROTO_TCP, TCP_SENDMOREACKS, (void *)&quickack, sizeof( quickack ) ) ||
+#endif /* macOS */
+#endif /* ALLOW_QUICKACK */
           setsockopt( conn->rwsock, SOL_SOCKET, SO_SNDTIMEO, (void *)&sndto, sizeof( struct timeval ) )  )
     {
         conn->sender->state = DEFUNCT;
@@ -1535,8 +1645,36 @@ displayStats(
     {
     printMsg( ctxt, 0, "====================================================================================================\n" );
     printMsg( ctxt, 0, "\n" );
+    printMsg( ctxt, 0, "Connection           : " );
+    if (  ctxt->cltaddr == NULL )
+        printMsg( ctxt, 0, "Unknown" );
+    else
+        printIPaddress( getStdOut( ctxt ), ctxt->cltaddr, ctxt->lcltaddr, 1 );
+    printMsg( ctxt, 0, " => " );
+    if (  ctxt->srvaddr == NULL )
+        printMsg( ctxt, 0, "Unknown" );
+    else
+        printIPaddress( getStdOut(ctxt), ctxt->srvaddr->ai_addr, ctxt->srvaddr->ai_addrlen, 1 );
+    printMsg( ctxt, 0, "\n" );
     printMsg( ctxt, 0, "Mode                 : %s\n", (ctxt->mode==ASYNC)?"ASYNC":"SYNC" );
     printMsg( ctxt, 0, "Message size         : %'d bytes\n", ctxt->msgsz );
+    if (  ctxt->srvsbsz || ctxt->srvrbsz || ctxt->cltsbsz || ctxt->cltrbsz || ctxt->nodelay || ctxt->quickack  )
+    {
+        printMsg( ctxt, 0, "Options              :" );
+        if (  ctxt->srvsbsz  )
+            printMsg( ctxt, 0, " srvsbsz=%d", ctxt->srvsbsz );
+        if (  ctxt->srvrbsz  )
+            printMsg( ctxt, 0, " srvrbsz=%d", ctxt->srvrbsz );
+        if (  ctxt->cltsbsz  )
+            printMsg( ctxt, 0, " cltsbsz=%d", ctxt->cltsbsz );
+        if (  ctxt->cltrbsz  )
+            printMsg( ctxt, 0, " cltrbsz=%d", ctxt->cltrbsz );
+        if (  ctxt->nodelay  )
+            printMsg( ctxt, 0, " nodelay" );
+        if (  ctxt->quickack  )
+            printMsg( ctxt, 0, " quickack" );
+        printMsg( ctxt, 0, "\n" );
+    }
     printMsg( ctxt, 0, "Connections          : %'d\n", ctxt->nconn );
     printMsg( ctxt, 0, "Ramp time            : %d seconds\n", ctxt->ramp );
     printMsg( ctxt, 0, "Measure time         : %'d seconds\n", ctxt->dur );
@@ -1698,8 +1836,25 @@ cmdClient(
             ret = 31;
             goto fini;
         }
+        if (  ctxt->srvaddr == NULL  )
+            ctxt->srvaddr = srvaddr;
 
         // get some info about the connection
+        if (  ctxt->cltaddr == NULL  )
+        {
+            socklen_t addrlen = sizeof(struct sockaddr_in6);
+            struct sockaddr * addr = (struct sockaddr *)calloc( 1, addrlen );
+            if (  addr != NULL  )
+            {
+                if (  getsockname( ctxt->conn[connid]->rwsock, addr, &addrlen )  )
+                    free( (void *)addr );
+                else
+                {
+                    ctxt->cltaddr = addr;
+                    ctxt->lcltaddr = addrlen;
+                }
+            }
+        }
         tcpmaxseg = -1;
         ltcpmaxseg = sizeof( tcpmaxseg );
         if (  getsockopt( ctxt->conn[connid]->rwsock, IPPROTO_TCP, TCP_MAXSEG, (void *)&tcpmaxseg, &ltcpmaxseg )  )
@@ -1712,13 +1867,20 @@ cmdClient(
         lsorcvbuf = sizeof( sorcvbuf );
         if (  getsockopt( ctxt->conn[connid]->rwsock, SOL_SOCKET, SO_RCVBUF, (void *)&sorcvbuf, &lsorcvbuf )  )
             sorcvbuf = -1;
+#if defined(LINUX)
+        if (  sosndbuf > 0  )
+            sosndbuf /= 2;
+        if (  sorcvbuf > 0  )
+            sorcvbuf /= 2;
+#endif /* LINUX */
 
 #if defined(ALLOW_BUFFSIZE)
         // set socket buffer sizes if required
-        if (  ctxt->sbsz && ( ctxt->sbsz != sosndbuf )  )
+        if (  ctxt->cltsbsz && ( ctxt->cltsbsz != sosndbuf )  )
         {
             errno = 0;
-            if (  setsockopt( ctxt->conn[connid]->rwsock, SOL_SOCKET, SO_SNDBUF, (void *)&(ctxt->sbsz), sizeof( ctxt->sbsz ) )  )
+            if (  setsockopt( ctxt->conn[connid]->rwsock, SOL_SOCKET, SO_SNDBUF, 
+                              (void *)&(ctxt->cltsbsz), sizeof( ctxt->cltsbsz ) )  )
             {
                 printErr( ctxt, 0, "error: setsockopt( ..., SO_SNDBUF, ...) failed %d (%s)\n",
                           errno, strerror( errno ) );
@@ -1736,10 +1898,11 @@ cmdClient(
                 goto fini;
             }
         }
-        if (  ctxt->rbsz && ( ctxt->rbsz != sorcvbuf )  )
+        if (  ctxt->cltrbsz && ( ctxt->cltrbsz != sorcvbuf )  )
         {
             errno = 0;
-            if (  setsockopt( ctxt->conn[connid]->rwsock, SOL_SOCKET, SO_RCVBUF, (void *)&(ctxt->rbsz), sizeof( ctxt->rbsz ) )  )
+            if (  setsockopt( ctxt->conn[connid]->rwsock, SOL_SOCKET, SO_RCVBUF, 
+                              (void *)&(ctxt->cltrbsz), sizeof( ctxt->cltrbsz ) )  )
             {
                 printErr( ctxt, 0, "error: setsockopt( ..., SO_RCVBUF, ...) failed %d (%s)\n",
                           errno, strerror( errno ) );
@@ -1757,12 +1920,19 @@ cmdClient(
                 goto fini;
             }
         }
+#if defined(LINUX)
+        if (  sosndbuf > 0  )
+            sosndbuf /= 2;
+        if (  sorcvbuf > 0  )
+            sorcvbuf /= 2;
+#endif /* LINUX */
 #endif /* ALLOW_BUFFSIZE */
 
         printMsg( ctxt, 0, "info: connected to '" );
         printIPaddress( getStdOut(ctxt), srvaddr->ai_addr, srvaddr->ai_addrlen, 1 );
-        fprintf( getStdOut( ctxt ), "' (conn = %d, %s, msgsz = %d, maxseg = %d, sndbsz = %d, rcvbsz = %d)\n",
-                 connid, (ctxt->mode==ASYNC)?"ASYNC":"SYNC", ctxt->msgsz, tcpmaxseg, sosndbuf, sorcvbuf );
+        fprintf( getStdOut( ctxt ), "' (conn = %d, %s, msgsz = %d, maxseg = %d, sndbsz = %d, rcvbsz = %d%s%s)\n",
+                 connid, (ctxt->mode==ASYNC)?"ASYNC":"SYNC", ctxt->msgsz, tcpmaxseg, sosndbuf, sorcvbuf,
+                 ctxt->nodelay?", nodelay":"", ctxt->quickack?", quickack":"" );
     }
 
     // Hand off connections to dedicated threads

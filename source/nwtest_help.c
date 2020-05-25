@@ -32,20 +32,29 @@ help_usage( void )
 "    nwtest h[elp] { h[elp] | u[sage] | g[eneral] | c[lient] |\n"
 "                    s[erver] | m[etrics] | f[ull] }\n\n"
 
-"    nwtest s[erver] <port> [ -4 | -6 ] [ -h[ost] <h> ] [ -m[sgsz] <m> ]\n"
-"                    [ -c[onn] <c> ] [ -l[og] <logpath> ]\n\n"
+"    nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]\n"
+"                    [-c[onn] <c>] [-l[og] <logpath>]\n\n"
 
-"    nwtest c[lient] <host> <port> [ -s[rc] <srcaddr>] [ -4 | -6 ] [ -a[sync] ]\n"
-"                    [ -c[onn] <c> ] [ -d[ur] <d> ] [ -r[amp] <r> ]\n"
-"                    [ -m[sgsz] <m> ] [ -l[og] <logpath> ]\n"
+"    nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]\n"
+"                    [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]\n"
+"                    [-m[sgsz] <m>] [-l[og] <logpath>]\n"
 #if defined(ALLOW_BUFFSIZE)
-"                    [ -bsz <bsz> | [ -sbsz <sbsz> ] [ -rbsz <rbsz> ] ]\n"
+"                    [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]\n"
+"                    [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]\n"
 #endif /* ALLOW_BUFFSIZE */
+#if defined(ALLOW_NODELAY) && defined(ALLOW_QUICKACK)
+"                    [-n[odelay]] [-q[uickack]] [-b[rief]|-v[erbose]]\n\n"
+#else
 #if defined(ALLOW_NODELAY)
-"                    [ -n[odelay] ] [ -b[rief] | -v[erbose] ]\n\n"
-#else /* ! ALLOW_NODELAY */
-"                    [ -b[rief] | -v[erbose] ]\n\n"
-#endif /* ! ALLOW_NODELAY */
+"                    [-n[odelay]] [-b[rief]|-v[erbose]]\n\n"
+#else
+#if defined(ALLOW_QUICKACK)
+"                    [-q[uickack]] [-b[rief]|-v[erbose]]\n\n"
+#else
+"                    [-b[rief]|-v[erbose]]\n\n"
+#endif /* ALLOW_QUICKACK */
+#endif /* ALLOW_NODELAY */
+#endif /* ALLOW_NODELAY && ALLOW_QUICKACK */
 
     );
 } // help_usage
@@ -104,17 +113,26 @@ help_client( int brief )
     printf(
 
 "\n"
-"nwtest c[lient] <host> <port> [ -s[rc] <srcaddr>] [ -4 | -6 ] [ -a[sync] ]\n"
-"                [ -c[onn] <c> ] [ -d[ur] <d> ] [ -r[amp] <r> ]\n"
-"                [ -m[sgsz] <m> ] [ -l[og] <logpath> ]\n"
+"nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]\n"
+"                [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]\n"
+"                [-m[sgsz] <m>] [-l[og] <logpath>]\n"
 #if defined(ALLOW_BUFFSIZE)
-"                [ -bsz <bsz> | [ -sbsz <sbsz> ] [ -rbsz <rbsz> ] ]\n"
+"                [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]\n"
+"                [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]\n"
 #endif /* ALLOW_BUFFSIZE */
-#if defined(ALLOW_NODELAY)
-"                [ -n[odelay] ] [ -b[rief] | -v[erbose] ]\n\n"
-#else /* ! ALLOW_NODELAY */
-"                [ -b[rief] | -v[erbose] ]\n\n"
-#endif /* ! ALLOW_NODELAY */
+#if defined(ALLOW_NODELAY) && defined(ALLOW_QUICKACK)
+"                [-n[odelay]] [-q[uickack]] [-b[rief]|-v[erbose]]\n\n"
+#else
+#if defined(ALLOW_NODELAY) 
+"                [-n[odelay]] [-b[rief]|-v[erbose]]\n\n"
+#else
+#if defined(ALLOW_QUICKACK) 
+"                [-q[uickack]] [-b[rief]|-v[erbose]]\n\n"
+#else
+"                [-b[rief]|-v[erbose]]\n\n"
+#endif /* ALLOW_QUICKACK */
+#endif /* ALLOW_NODELAY */
+#endif /* ALLOW_NODELAY && ALLOW_QUICKACK */
     );
 
     if (   ! brief  )
@@ -160,20 +178,31 @@ help_client( int brief )
 #if defined(ALLOW_BUFFSIZE)
 "Normally the OS will allocate the sizes for the socket send and receive\n"
 "buffers, and these sizes will be reported in the connection messages. If\n"
-"you want to specify different values for the socket send and receive buffer\n"
-"sizes then you can do so using '-bsz' (sets size for both send and receive\n"
-"buffers), '-sbsz' (sets size for the send buffer)  and '-rbsz' (sets size\n"
-"for receive buffer). These values are specified in bytes and each must be\n"
-"between %'d and %'d. Also, the total of the sizes must be <= %'d.\n"
-"Explicitly specified values will be sent to, and used by, the server. The\n"
-"size may be specified using a suffix of 'k' to repesent KB (%'d bytes) or\n"
-"'m' to represent MB (%'d bytes).\n\n"
+"you want to use specific values for the socket send and receive buffer\n"
+"sizes then you can do so using '-sbsz' (sets size for send buffer on both\n"
+"client and server), '-rbsz' (sets size for the receive buffer on both client\n"
+"and server), '-srvsbsz' (sets size for send buffer on server), '-srvrbsz'\n"
+"(sets size for receive buffer on server), '-cltsbsz' (sets size for send\n"
+"buffer on client) and '-cltrbsz' (sets size for receive buffer on client).\n"
+"These values are specified in bytes and each must be between %'d and\n"
+"%'d. Also, the total of the sizes must be <= %'d. These sizes may\n"
+"be specified using a suffix of 'k' to repesent KB (%'d bytes) or 'm' to\n"
+"represent MB (%'d bytes).\n\n"
 #endif /* ALLOW_BUFFSIZE */
 
 #if defined(ALLOW_NODELAY)
 "If '-nodelay' is specified then the TCP_NODELAY option is enabled on all\n"
 "sockets used for data transfer in both the client and the server.\n\n"
 #endif /*  ALLOW_NODELAY */
+
+#if defined(ALLOW_QUICKACK)
+#if defined(LINUX)
+"If '-quickack' is specified then the TCP_QUICKACK option is enabled on\n"
+#else /* macOS */
+"If '-quickack' is specified then the TCP_SENDMOREACKS option is enabled on\n"
+#endif /* macOS */
+"all sockets used for data transfer in both the client and the server.\n\n"
+#endif /*  ALLOW_QUICKACK */
 
 "Normally only aggregate performance metrics are displayed, but if '-verbose'\n"
 "is specified then per connection metrics are also displayed. If '-brief' is\n"
@@ -199,8 +228,8 @@ help_server( int brief )
     printf(
 
 "\n"
-"nwtest s[erver] <port> [ -4 | -6 ] [ -h[ost] <h> ] [ -m[sgsz] <m> ]\n"
-"                       [ -c[onn] <c> ] [ -l[og] <logpath> ]\n\n"
+"nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]\n"
+"                       [-c[onn] <c>] [-l[og] <logpath>]\n\n"
 
     );
 
@@ -351,7 +380,7 @@ help_metrics( void )
 "in each message sent or received. The actual amount of data for each message\n"
 "will be larger than this due to various network and protocol related overheads.\n\n"
 
-"For IPv4, there is at least 28 bytes of overhead per message and in unusual\n"
+"For IPv4/TCP, there is at least 28 bytes of overhead per message and in unusual\n"
 "cases this may be as much as 36 bytes. In addition the TCPv4 header is another\n"
 "24 bytes. In most cases, for this program, the IPv4 packet size will be <message\n"
 "size> + 52 bytes.\n\n"

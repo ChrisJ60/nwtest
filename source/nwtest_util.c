@@ -107,6 +107,40 @@ valueConvert(
 } // valueConvert
 
 /*
+ * Convert a string in either decimal or hex to an integer value.
+ */
+
+long
+hexConvert(
+    char * s
+          )
+{
+    char * end = NULL;
+    long val;
+
+    if (  (s == NULL) || (*s == '\0')  )
+        return -1;
+
+    val = strtol( s, &end, 10 );
+    if (  *end == '\0'  )
+    {
+        if (  val < 0  )
+            return -1;
+        return val;
+    }
+
+    val = strtol( s, &end, 16 );
+    if (  *end == '\0'  )
+    {
+        if (  val < 0  )
+            return -1;
+        return val;
+    }
+
+    return -1;
+} // hexConvert
+
+/*
  * Determine the maximum allowed combined size for socket buffers.
  */
 
@@ -1077,6 +1111,7 @@ msgAlloc(
                 mconn_t * mconn = (mconn_t *)m;
                 mconn->async = HTON8( thread->conn->ctxt->mode == ASYNC );
                 mconn->nodelay = HTON8( thread->conn->ctxt->nodelay );
+                mconn->quickack = HTON8( thread->conn->ctxt->quickack );
                 mconn->msgsz = HTON32( (uint32)thread->conn->ctxt->msgsz );
             }
             break;
@@ -1212,8 +1247,10 @@ contextAlloc(
     int      nconn,
     int      v4only,
     int      v6only,
-    int      sbsz,
-    int      rbsz,
+    int      srvsbsz,
+    int      srvrbsz,
+    int      cltsbsz,
+    int      cltrbsz,
     FILE   * log,
     int      debug
             )
@@ -1239,8 +1276,11 @@ contextAlloc(
     c->v4only = v4only;
     c->v6only = v6only;
     c->nodelay = NODELAY_OFF;
-    c->sbsz = sbsz;
-    c->rbsz = rbsz;
+    c->quickack = QUICKACK_OFF;
+    c->srvsbsz = srvsbsz;
+    c->srvrbsz = srvrbsz;
+    c->cltsbsz = cltsbsz;
+    c->cltrbsz = cltrbsz;
     c->log = log;
     c->debug = debug;
     c->tbase = getTS( 0 );

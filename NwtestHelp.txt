@@ -1,5 +1,5 @@
 
-Version 2.0
+Version 2.2
 
 This program implements a network response time and throughput test.
 
@@ -34,14 +34,15 @@ Usage:
     nwtest h[elp] { h[elp] | u[sage] | g[eneral] | c[lient] |
                     s[erver] | m[etrics] | f[ull] }
 
-    nwtest s[erver] <port> [ -4 | -6 ] [ -h[ost] <h> ] [ -m[sgsz] <m> ]
-                    [ -c[onn] <c> ] [ -l[og] <logpath> ]
+    nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]
+                    [-c[onn] <c>] [-l[og] <logpath>]
 
-    nwtest c[lient] <host> <port> [ -s[rc] <srcaddr>] [ -4 | -6 ] [ -a[sync] ]
-                    [ -c[onn] <c> ] [ -d[ur] <d> ] [ -r[amp] <r> ]
-                    [ -m[sgsz] <m> ] [ -l[og] <logpath> ]
-                    [ -bsz <bsz> | [ -sbsz <sbsz> ] [ -rbsz <rbsz> ] ]
-                    [ -n[odelay] ] [ -b[rief] | -v[erbose] ]
+    nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]
+                    [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]
+                    [-m[sgsz] <m>] [-l[og] <logpath>]
+                    [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]
+                    [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]
+                    [-n[odelay]] [-q[uickack]] [-b[rief]|-v[erbose]]
 
 
 nwtest h[elp] { u[sage] | g[eneral] | c[lient] | s[erver] | m[etrics] | f[ull] }
@@ -49,8 +50,8 @@ nwtest h[elp] { u[sage] | g[eneral] | c[lient] | s[erver] | m[etrics] | f[ull] }
 Display help on the specified topic.
 
 
-nwtest s[erver] <port> [ -4 | -6 ] [ -h[ost] <h> ] [ -m[sgsz] <m> ]
-                       [ -c[onn] <c> ] [ -l[og] <logpath> ]
+nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]
+                       [-c[onn] <c>] [-l[og] <logpath>]
 
 Run as a server on local port <port>. If a specific host is specified (<h>)
 then bind to the address(es) for that host, otherwise bind to INADDR[6]_ANY.
@@ -76,11 +77,12 @@ to <logpath> with microsecond resolution timestamps. A <logpath> of '-'
 equates to 'stdout' and '--' equates to 'stderr'.
 
 
-nwtest c[lient] <host> <port> [ -s[rc] <srcaddr>] [ -4 | -6 ] [ -a[sync] ]
-                [ -c[onn] <c> ] [ -d[ur] <d> ] [ -r[amp] <r> ]
-                [ -m[sgsz] <m> ] [ -l[og] <logpath> ]
-                [ -bsz <bsz> | [ -sbsz <sbsz> ] [ -rbsz <rbsz> ] ]
-                [ -n[odelay] ] [ -b[rief] | -v[erbose] ]
+nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]
+                [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]
+                [-m[sgsz] <m>] [-l[og] <logpath>]
+                [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]
+                [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]
+                [-n[odelay]] [-q[uickack]] [-b[rief]|-v[erbose]]
 
 Run as a client connecting to a server at host <host> and port <port>. The
 host can be specified as either a host name or an IP address (IPv4 or IPv6).
@@ -120,17 +122,22 @@ equates to 'stdout' and '--' equates to 'stderr'.
 
 Normally the OS will allocate the sizes for the socket send and receive
 buffers, and these sizes will be reported in the connection messages. If
-you want to specify different values for the socket send and receive buffer
-sizes then you can do so using '-bsz' (sets size for both send and receive
-buffers), '-sbsz' (sets size for the send buffer)  and '-rbsz' (sets size
-for receive buffer). These values are specified in bytes and each must be
-between 8,192 and 8,388,608. Also, the total of the sizes must be <= 8,388,608.
-Explicitly specified values will be sent to, and used by, the server. The
-size may be specified using a suffix of 'k' to repesent KB (1,024 bytes) or
-'m' to represent MB (1,048,576 bytes).
+you want to use specific values for the socket send and receive buffer
+sizes then you can do so using '-sbsz' (sets size for send buffer on both
+client and server), '-rbsz' (sets size for the receive buffer on both client
+and server), '-srvsbsz' (sets size for send buffer on server), '-srvrbsz'
+(sets size for receive buffer on server), '-cltsbsz' (sets size for send
+buffer on client) and '-cltrbsz' (sets size for receive buffer on client).
+These values are specified in bytes and each must be between 8,192 and
+8,388,608. Also, the total of the sizes must be <= 8,388,608. These sizes may
+be specified using a suffix of 'k' to repesent KB (1,024 bytes) or 'm' to
+represent MB (1,048,576 bytes).
 
 If '-nodelay' is specified then the TCP_NODELAY option is enabled on all
 sockets used for data transfer in both the client and the server.
+
+If '-quickack' is specified then the TCP_SENDMOREACKS option is enabled on
+all sockets used for data transfer in both the client and the server.
 
 Normally only aggregate performance metrics are displayed, but if '-verbose'
 is specified then per connection metrics are also displayed. If '-brief' is
@@ -243,7 +250,7 @@ The message size that you specify defines the size of the 'application data'
 in each message sent or received. The actual amount of data for each message
 will be larger than this due to various network and protocol related overheads.
 
-For IPv4, there is at least 28 bytes of overhead per message and in unusual
+For IPv4/TCP, there is at least 28 bytes of overhead per message and in unusual
 cases this may be as much as 36 bytes. In addition the TCPv4 header is another
 24 bytes. In most cases, for this program, the IPv4 packet size will be <message
 size> + 52 bytes.

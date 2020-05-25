@@ -16,6 +16,7 @@
 #if !defined(WINDOWS)
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #else
 #include "Ws2tcpip.h"
@@ -77,18 +78,36 @@ nwcleanup(void)
 
 static int
 mRecv(
-    int    sock,
-    void * buff,
-    int    rcvlen
+    context_t * ctxt,
+    int         sock,
+    void      * buff,
+    int         rcvlen
      )
 {
     char * dptr = (char *) buff;
     int ret, serrno;
+    long onoff = 0;
 
     do {
         errno = 0;
         ret = recv( sock, (void *)dptr, rcvlen, MSG_WAITALL );
         serrno = errno;
+#if defined(ALLOW_QUICKACK) && defined(LINUX)
+        if (  ctxt->quickack  )
+        {
+            // Set TCP_QUICKACK
+            onoff = 1;
+            errno = 0;
+            if (  setsockopt( sock, IPPROTO_TCP, TCP_QUICKACK, (void *)&onoff, sizeof( onoff ) )  )
+            {
+                DEBUG( DEBUG_RECV, ctxt->debug, 1, 
+                       printErr( ctxt, 1, "DEBUG: failed to set TCP_QUICKACK %d (%s)\n", errno, strerror(serrno) ) )
+            }
+        }
+#endif /* ALLOW_QUICKACK && LINUX */
+        DEBUG( DEBUG_RECV, ctxt->debug, ( ( ret < 0) || ( serrno != 0 ) ), 
+               printErr( ctxt, 1, "DEBUG: recv() returned %d / %d (%s)\n", ret, serrno, serrno?strerror(serrno):"Success" ) )
+
         if (  ret == rcvlen  )
         {
             ret = 0;
@@ -101,25 +120,28 @@ mRecv(
                 return 1;
             if (  serrno == ECONNRESET  )
                 return -1;
-            ret = 0;
+            return 4;
         }
         else
         if (  ret == 0  )
         {
-            if (  serrno == ECONNRESET  )
-                return -1;
             if (  (serrno != EAGAIN) && (serrno != EWOULDBLOCK)  )
                 return 2;
+            return -1;
         }
         else
         if (  ret > rcvlen  )
+        {
+            DEBUG( DEBUG_RECV, ctxt->debug, 1,
+                   printErr( ctxt, 1, "DEBUG: receive overrun %d / %d\n", ret, rcvlen ) )
             return 3;
+        }
 
         dptr += ret;
         rcvlen -= ret;
-    } while (  dptr != NULL  );
+    } while (  rcvlen > 0  );
 
-    return ret;
+    return 0;
 } // mRecv
 
 
@@ -176,6 +198,7 @@ sendMsg(
        )
 {
     int ret = 0;
+    int serrno;
     int nbytes = 0;
     char * dptr = NULL;
     uint32 sndlen;
@@ -194,9 +217,10 @@ sendMsg(
     do {
         errno = 0;
         ret = send( sock, (void *)dptr, sndlen, 0 );
-        if (  ( ctxt->debug ) && ( ( ret < 0) || ( errno != 0 ) )  )
-            printErr( ctxt, 1, "DEBUG: send() returned %d / %d (%s)\n", ret, errno, errno?strerror(errno):"Success" );
-        if (  (ret == 0) || (errno == ECONNRESET) || (errno == EPIPE) || (errno == EPROTOTYPE)  )
+        serrno = errno;
+        DEBUG( DEBUG_SEND, ctxt->debug, ( ( ret < 0) || ( serrno != 0 ) ),
+               printErr( ctxt, 1, "DEBUG: send() returned %d / %d (%s)\n", ret, serrno, serrno?strerror(serrno):"Success" ) )
+        if (  (ret == 0) || (serrno == ECONNRESET) || (serrno == EPIPE) || (serrno == EPROTOTYPE)  )
         {
             if (  errmsg != NULL  )
                 *errmsg = "connection reset";
@@ -205,7 +229,7 @@ sendMsg(
         else
         if (  ret < 0  ) // error
         {
-            if (  errno != EAGAIN  )
+            if (  serrno != EAGAIN  )
             {
                 if (  errmsg != NULL  )
                     *errmsg = "send() returned an error";
@@ -261,7 +285,7 @@ recvMsg(
     }
 
     // receive the message header
-    ret = mRecv( sock, (void *)&(msg->hdr), sizeof( msghdr_t ) );
+    ret = mRecv( ctxt, sock, (void *)&(msg->hdr), sizeof( msghdr_t ) );
     if (  ret < 0  )
     {
         *errmsg = "connection reset";
@@ -277,8 +301,22 @@ recvMsg(
         }
         else
         {
-            if (  errmsg != NULL  )
-                *errmsg = "long receive (header)";
+            switch ( ret )
+            {
+                case 1:
+                case 2:
+                    if (  errmsg != NULL  )
+                        *errmsg = "timeout (header)";
+                    break;
+                case 3:
+                    if (  errmsg != NULL  )
+                        *errmsg = "receive overrun (header)";
+                    break;
+                default:
+                    if (  errmsg != NULL  )
+                        *errmsg = "unknown error (header)";
+                    break;
+            }
         }
         return ret;
     }
@@ -299,9 +337,12 @@ recvMsg(
     if (  (msglen > maxsz) || (secret != SECRET) ||
           ! validMsgType( msgtype )  )
     {
+        DEBUG( DEBUG_RECV, ctxt->debug, 1,
+               printErr( ctxt, 1, "DEBUG: msglen = %u, expected = %d, secret = %8.8x, msgtype = %d, ts = %u, seqno = %u\n",
+                         msglen, (int)sizeof(msghdr_t), secret, (int)msgtype, ts, seqno ) )
         if (  errmsg != NULL  )
             *errmsg = "invalid message header";
-        return 4;
+        return 5;
     }
     msz = getMsgSize( ctxt, msgtype );
     if (  (msgtype == MSG_DATA) || (msgtype == MSG_DATA_ACK)  )
@@ -310,7 +351,7 @@ recvMsg(
         {
             if (  errmsg != NULL  )
                 *errmsg = "invalid message length (data/dataack)";
-            return 5;
+            return 6;
         }
     }
     else
@@ -318,14 +359,14 @@ recvMsg(
     {
         if (  errmsg != NULL  )
             *errmsg = "invalid message length (control)";
-        return 5;
+        return 7;
     }
     msglen -= sizeof( msghdr_t );
 
     // All good, now try to receive the body of the message (if any)
     if (  msglen > 0  )
     {
-        ret = mRecv( sock, (void *)&(msg->data), msglen );
+        ret = mRecv( ctxt, sock, (void *)&(msg->data), msglen );
         if (  ret < 0  )
         {
             *errmsg = "connection reset";
@@ -341,8 +382,22 @@ recvMsg(
             }
             else
             {
-                if (  errmsg != NULL  )
-                    *errmsg = "long receive (header)";
+                switch ( ret )
+                {
+                    case 1:
+                    case 2:
+                        if (  errmsg != NULL  )
+                            *errmsg = "timeout (body)";
+                        break;
+                    case 3:
+                        if (  errmsg != NULL  )
+                            *errmsg = "receive overrun (body)";
+                        break;
+                    default:
+                        if (  errmsg != NULL  )
+                            *errmsg = "unknown error (body)";
+                        break;
+                }
             }
             return ret;
         }
