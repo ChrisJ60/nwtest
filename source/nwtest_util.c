@@ -23,7 +23,9 @@
 #if !defined(WINDOWS)
 #include <sys/types.h>
 #include <sys/socket.h>
+#if ! defined(SOLARIS)
 #include <sys/sysctl.h>
+#endif /* ! SOLARIS */
 #include <netdb.h>
 #else
 #include "Ws2tcpip.h"
@@ -146,9 +148,19 @@ hexConvert(
 
 int
 getMaxSockBuf(
-    void
+    int * maxsend,
+    int * maxrecv
              )
 {
+    int ret = 0;
+    long val;
+    FILE * f;
+    char * p;
+    char line[129];
+
+    if (  ( maxsend == NULL ) || ( maxrecv == NULL )  )
+        return -1;
+
 #if defined( MACOS )
     int maxsockbuf = 0;
     size_t lmaxsockbuf = sizeof( maxsockbuf );
@@ -156,12 +168,79 @@ getMaxSockBuf(
     errno = 0;
     if (  sysctlbyname( "kern.ipc.maxsockbuf", &maxsockbuf, &lmaxsockbuf, NULL, (size_t)0 ) ||
           ( lmaxsockbuf != sizeof( maxsockbuf ) )  )
+    {
+        ret = 1;
         maxsockbuf = DFLT_MAXSOCKBUF;
-
-    return maxsockbuf;
-#else /* ! MACOS */
-    return DFLT_MAXSOCKBUF;
+    }
+    maxsockbuf /= 2;
+    if (  maxsockbuf > DFLT_MAXSOCKBUF )
+        maxsockbuf = DFLT_MAXSOCKBUF;
+    *maxsend = *maxrecv = maxsockbuf;
+#elif defined(LINUX)
+    f = fopen( "/proc/sys/net/core/wmem_max", "r" );
+    if (  f == NULL  )
+    {
+        ret = 1;
+        *maxsend = DFLT_MAXSOCKBUF;
+    }
+    else
+    {
+        if (  fgets( line, sizeof(line)-1, f ) == NULL  )
+        {
+            ret = 1;
+            *maxsend = DFLT_MAXSOCKBUF;
+        }
+        else
+        {
+            p = strrchr( line, '\n' );
+            if (  p != NULL  )
+                *p = '\0';
+            val = strtol( line, &p, 10 );
+            if (  ( ( line[0] == '\0' ) || ( *p != '\0' ) ) || (val > DFLT_MAXSOCKBUF )  )
+            {
+                ret = 1;
+                *maxsend = DFLT_MAXSOCKBUF;
+            }
+            else
+                *maxsend = (int)val;
+        }
+        fclose( f );
+    }
+    f = fopen( "/proc/sys/net/core/rmem_max", "r" );
+    if (  f == NULL  )
+    {
+        ret = 1;
+        *maxrecv = DFLT_MAXSOCKBUF;
+    }
+    else
+    {
+        if (  fgets( line, sizeof(line)-1, f ) == NULL  )
+        {
+            ret = 1;
+            *maxrecv = DFLT_MAXSOCKBUF;
+        }
+        else
+        {
+            p = strrchr( line, '\n' );
+            if (  p != NULL  )
+                *p = '\0';
+            val = strtol( line, &p, 10 );
+            if (  ( ( line[0] == '\0' ) || ( *p != '\0' ) ) || (val > DFLT_MAXSOCKBUF )  )
+            {
+                ret = 1;
+                *maxrecv = DFLT_MAXSOCKBUF;
+            }
+            else
+                *maxrecv = (int)val;
+        }
+        fclose( f );
+    }
+#else /* ! MACOS && ! LINUX */
+    ret = 1;
+    *maxsend = *maxrecv = DFLT_MAXSOCKBUF;
 #endif /* ! MACOS */
+
+    return ret;
 } // getMaxSockBuf
 
 /*
@@ -616,7 +695,7 @@ getConnection(
     return -1;
 } // getConnection
 
-#if ! defined(MACOS)
+#if defined(LINUX) || defined(SOLARIS)
 /*
  * Equivalent of BSF FD_COPY function.
  */
@@ -629,7 +708,9 @@ FD_COPY(
 {
     memcpy( (void *)copy, (void *)orig, sizeof( fd_set ) );
 } // FD_COPY
+#endif /* LINUX || SOLARIS */
 
+#if defined(LINUX)
 /*
  * Equivalent of htonl for 64-bit values.
  */
@@ -667,7 +748,7 @@ ntohll(
     
     return hval;
 } // ntohll
-#endif /* MACOS */
+#endif /* LINUX */
 
 /*
  * Return the current time as a microsecod offset from another timestamp.
@@ -679,11 +760,12 @@ getTS(
      )
 {
     struct timeval tv;
+    uint64 ts = 0;
 
     if (  gettimeofday( &tv, NULL )  )
-        return 0;
-
-    return ( tv.tv_sec * 1000000 ) + tv.tv_usec - tbase;
+        return ts;
+    ts = ( ( (uint64)tv.tv_sec * (uint64)1000000 ) + (uint64)tv.tv_usec ) - tbase;
+    return ts;
 } // getTS
 
 /*
@@ -1112,6 +1194,7 @@ msgAlloc(
                 mconn->async = HTON8( thread->conn->ctxt->mode == ASYNC );
                 mconn->nodelay = HTON8( thread->conn->ctxt->nodelay );
                 mconn->quickack = HTON8( thread->conn->ctxt->quickack );
+                mconn->ecn = HTON8( thread->conn->ctxt->ecn );
                 mconn->msgsz = HTON32( (uint32)thread->conn->ctxt->msgsz );
             }
             break;
@@ -1286,7 +1369,7 @@ contextAlloc(
     c->tbase = getTS( 0 );
     c->maxmsgsz = MAX_MSG_SIZE;
     c->maxdatasz = getMaxDataSize( c );
-    c->maxsockbuf = getMaxSockBuf();
+    getMaxSockBuf( &(c->maxsendbuf), &(c->maxrecvbuf) );
     FD_ZERO( &c->lfds );
 
     for (i = 0; i < nconn; i++)

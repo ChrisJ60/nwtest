@@ -1,9 +1,9 @@
 ## nwtest
 
-A macOS & Linux utility for performing network performance tests. The tool can be used to measure both throughput and latency for TCP/IP connections and can operate in either synchronous (request/response) or asynchronous (streaming) modes.
+A macOS, Linux and Solaris utility for performing network performance tests. The tool can be used to measure both throughput and latency for TCP/IP connections and can operate in either synchronous (request/response) or asynchronous (streaming) modes.
 
 ## Documentation
-Please see the file [NwtestHelp.txt](./NwtestHelp.txt).
+Please see the online help files [HelpMacOS.txt](./HelpMacOS.txt), [HelpLinux.txt](./HelpLinux.txt) and [HelpSolaris](./HelpSolaris.txt).
 
 ## License
 

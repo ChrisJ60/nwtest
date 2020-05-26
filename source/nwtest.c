@@ -28,27 +28,11 @@
 #include <nwtest.h>
 
 /******************************************************************************
- * Data
+ * Global Data
  */
 
 struct timeval pstart, pend;
 struct rusage rstart, rend;
-
-/******************************************************************************
- * Private functions
- */
-
-static void
-displaySizes(
-    void
-            )
-{
-    printf("sizeof( msghdr_t ) = %lu\n", sizeof( msghdr_t ) );
-    printf("offsetof( msg_t, data ) = %lu\n", offsetof( msg_t, data ) );
-    printf("sizeof( mconn_t ) = %lu\n", sizeof( mconn_t ) );
-    printf("offsetof( mdata_t, datasz ) = %lu\n", offsetof( mdata_t, datasz ) );
-    printf("offsetof( mdata_t, data ) = %lu\n", offsetof( mdata_t, data ) );
-} // displaySizes
 
 /******************************************************************************
  * Public functions
@@ -67,6 +51,10 @@ cmdHelp(
     if (  argc != 1  )
         help( HELP, 1 );
 
+    if (  ( strcmp( argv[0], "info" ) == 0 ) ||
+          ( strcmp( argv[0], "i" ) == 0 )  )
+        help( INFO, 0 );
+    else
     if (  ( strcmp( argv[0], "usage" ) == 0 ) ||
           ( strcmp( argv[0], "u" ) == 0 )  )
         help( USAGE, 0 );
@@ -95,6 +83,78 @@ cmdHelp(
     return HELP_EXIT;
 } // cmdHelp
 
+/*
+ * Process the help sub-command
+ */
+
+static int
+cmdInfo(
+    int    argc,
+    char * argv[]
+       )
+{
+    int maxsendbuf, maxrecvbuf, ret;
+
+    if (  argc != 0  )
+        help( INFO, 1 );
+
+    ret = getMaxSockBuf( &maxsendbuf, &maxrecvbuf );
+
+    printf( "\n" );
+    printf( "Version         : %s\n", VERSION );
+    printf( "Platform        : %s\n",
+#if defined(LINUX)
+            "Linux"
+#elif defined(SOLARIS)
+            "Solaris"
+#else
+            "macOS"
+#endif
+          );
+    printf( "Options         :%s%s%s%s%s%s",
+#if defined(ALLOW_BUFFSIZE)
+            " buffsize",
+#else
+            "",
+#endif /* ALLOW_BUFFSIZE */
+#if defined(ALLOW_NODELAY)
+            " nodelay",
+#else
+            "",
+#endif /* ALLOW_NODELAY */
+#if defined(ALLOW_QUICKACK)
+            " quickack",
+#else
+            "",
+#endif /* ALLOW_QUICKACK */
+#if defined(ALLOW_TCPECN)
+            " tcpecn",
+#else
+            "",
+#endif /* ALLOW_TCPECN */
+#if defined(ENABLE_DEBUG)
+            " debug",
+#else
+            "",
+#endif /* ENABLE_DEBUG */
+          "\n" );
+#if defined(ALLOW_BUFFSIZE)
+    if (  ret  )
+    {
+        printf( "Max send buffer : Unknown, limited to %'d bytes\n", DFLT_MAXSOCKBUF );
+        printf( "Max recv buffer : Unknown, limited to %'d bytes\n", DFLT_MAXSOCKBUF );
+    }
+    else
+    {
+        printf( "Max send buffer : %'d bytes\n", maxsendbuf );
+        printf( "Max recv buffer : %'d bytes\n", maxrecvbuf );
+    }
+#endif /* ALLOW_BUFFSIZE */
+    printf( "\n" );
+
+    return 0;
+} // cmdInfo
+
 int
 main(
     int    argc,
@@ -113,6 +173,10 @@ main(
     if (  ( strcmp( argv[1], "help" ) == 0 ) ||
           ( strcmp( argv[1], "h" ) == 0 )  )
         ret = cmdHelp( argc-2, &argv[2] );
+    else
+    if (  ( strcmp( argv[1], "info" ) == 0 ) ||
+          ( strcmp( argv[1], "i" ) == 0 )  )
+        ret = cmdInfo( argc-2, &argv[2] );
     else
     if (  ( strcmp( argv[1], "server" ) == 0 ) ||
           ( strcmp( argv[1], "s" ) == 0 )  )

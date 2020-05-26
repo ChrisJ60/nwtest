@@ -1,5 +1,5 @@
 
-Version 2.2
+Version 2.3
 
 This program implements a network response time and throughput test.
 
@@ -31,8 +31,10 @@ number of connections.
 
 Usage:
 
-    nwtest h[elp] { h[elp] | u[sage] | g[eneral] | c[lient] |
-                    s[erver] | m[etrics] | f[ull] }
+    nwtest h[elp] { h[elp] | i[nfo] | u[sage] | g[eneral] |
+                    c[lient] | s[erver] | m[etrics] | f[ull] }
+
+    nwtest i[nfo]
 
     nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]
                     [-c[onn] <c>] [-l[og] <logpath>]
@@ -48,6 +50,11 @@ Usage:
 nwtest h[elp] { u[sage] | g[eneral] | c[lient] | s[erver] | m[etrics] | f[ull] }
 
 Display help on the specified topic.
+
+
+nwtest i[nfo] }
+
+Display information about this utility.
 
 
 nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]
@@ -128,15 +135,19 @@ client and server), '-rbsz' (sets size for the receive buffer on both client
 and server), '-srvsbsz' (sets size for send buffer on server), '-srvrbsz'
 (sets size for receive buffer on server), '-cltsbsz' (sets size for send
 buffer on client) and '-cltrbsz' (sets size for receive buffer on client).
-These values are specified in bytes and each must be between 8,192 and
-8,388,608. Also, the total of the sizes must be <= 8,388,608. These sizes may
+These values are specified in bytes and each must be between 4,096 and
+4,194,304. Also, the total of the sizes must be <= 4,194,304. These sizes may
 be specified using a suffix of 'k' to repesent KB (1,024 bytes) or 'm' to
 represent MB (1,048,576 bytes).
+
+Other factors, such as OS configuration, may place further constraints on
+the maximum allowed send and receive buffer sizes. Use 'nwtest info' to
+get more specific information.
 
 If '-nodelay' is specified then the TCP_NODELAY option is enabled on all
 sockets used for data transfer in both the client and the server.
 
-If '-quickack' is specified then the TCP_SENDMOREACKS option is enabled on
+If '-quickack' is specified then the TCP_QUICKACK option is enabled on
 all sockets used for data transfer in both the client and the server.
 
 Normally only aggregate performance metrics are displayed, but if '-verbose'

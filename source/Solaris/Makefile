@@ -1,8 +1,8 @@
 CC	=    cc
-CFLAGS	=    -O3
-LDFLAGS	=    -O3
-DEFS	=    -DMACOS
-LIBS    =      
+CFLAGS	=    -O3 -m64
+LDFLAGS	=    -O3 -m64
+DEFS	=    -DSOLARIS
+LIBS    =    -lsocket -lnsl
 
 #
 #	Top-level targets
@@ -11,7 +11,6 @@ LIBS    =
 all:        nwtest
 
 clean:
-	rm -rf *.dSYM
 	rm -f *.o nwtest
 
 nwtest:	nwtest.o nwtest_help.o nwtest_util.o nwtest_network.o nwtest_server.o nwtest_client.o

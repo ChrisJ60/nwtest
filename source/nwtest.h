@@ -23,13 +23,17 @@
  * Configuration things. These can be changed (with care).
  */
 #define  PROGNAME          "NWTEST"
-#define  VERSION           "2.2"
+#define  VERSION           "2.3"
 
 #define  ENABLE_DEBUG      1
 #define  ALLOW_NODELAY     1
+#if ! defined(SOLARIS)
 #define  ALLOW_QUICKACK    1
+#endif /* SOLARIS */
 #define  ALLOW_BUFFSIZE    1
-#define  USE_TCPECN        1 /* macOS only */
+#if defined(MACOS)
+#define  ALLOW_TCPECN      1
+#endif /* ALLOW_TCPECN */
 
 #define  MAX_MSG_SIZE      1048576
 #define  DFLT_CLT_MSG_SIZE 1024
@@ -46,9 +50,9 @@
 #define  MIN_RAMP          0
 #define  MAX_RAMP          30
 #define  DFLT_RAMP         10
-#define  MIN_BSZ           (8 * 1024)
-#define  MAX_BSZ           (8 * 1024 * 1024)
-#define  DFLT_MAXSOCKBUF   (8 * 1024 * 1024)
+#define  MIN_BSZ           (4 * 1024)
+#define  MAX_BSZ           (4 * 1024 * 1024)
+#define  DFLT_MAXSOCKBUF   (4 * 1024 * 1024)
 
 /*
  * Other stuff (do not change).
@@ -79,6 +83,8 @@
 #define  INTR_EXIT         127
 #define  KB_MULT           1024L
 #define  MB_MULT           (KB_MULT * KB_MULT)
+#define  ECN_OFF           0
+#define  ECN_ON            1
 #define  NODELAY_OFF       0
 #define  NODELAY_ON        1
 #define  QUICKACK_OFF      0
@@ -113,7 +119,7 @@
  * Types
  */
 
-typedef enum { USAGE, HELP, GENERAL, SERVER, CLIENT, METRICS, FULL } help_t;
+typedef enum { USAGE, HELP, INFO, GENERAL, SERVER, CLIENT, METRICS, FULL } help_t;
 typedef enum { DEFUNCT, RUNNING, RAMP, MEASURE, END, STOP, FINISHED } tstate_t;
 typedef enum { SENDER, RECEIVER } ttype_t;
 typedef enum { ANY, SYNC, ASYNC } tmode_t;
@@ -165,6 +171,7 @@ struct s_connmsg
     uint8       async;
     uint8       nodelay;
     uint8       quickack;
+    uint8       ecn;
     uint32      msgsz;
     uint32      sbsz;
     uint32      rbsz;
@@ -257,6 +264,7 @@ struct s_conn
     int               msgsz;
     int               nodelay;
     int               quickack;
+    int               ecn;
     volatile int      busy;
     volatile int      ready;
     long              startts;
@@ -292,8 +300,11 @@ struct s_context
     int               v6only;
     int               nodelay;
     int               quickack;
+    int               ecn;
+    int               ecnon;
     int               nconn;
-    int               maxsockbuf;
+    int               maxsendbuf;
+    int               maxrecvbuf;
     int               srvsbsz;
     int               srvrbsz;
     int               cltsbsz;
@@ -364,17 +375,19 @@ char * msgTypeStr( int mtype );
 
 int valueConvert( char * val, long * lval );
 
-int getMaxSockBuf( void );
+int getMaxSockBuf( int * maxsend, int * maxrecv );
 
-#if ! defined(MACOS)
+#if defined(LINUX) || defined(SOLARIS)
 void FD_COPY( fd_set * orig, fd_set * copy );
+#endif /* LINUX || SOLARIS */
+#if defined(LINUX)
 uint64 htonll( uint64 hval );
 uint64 ntohll( uint64 nval );
-#endif /* MACOS */
+#endif /* LINUX */
 
 #if defined(SOLARIS) || defined(WINDOWS)
 char * strsep( char **stringp, const char *delim );
-#endif /* SOLARIS || WINDOWS */
+#endif /* LINUX || WINDOWS */
 
 int logLock( context_t * ctxt );
 

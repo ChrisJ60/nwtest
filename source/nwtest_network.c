@@ -86,7 +86,7 @@ mRecv(
 {
     char * dptr = (char *) buff;
     int ret, serrno;
-    long onoff = 0;
+    int onoff = 0;
 
     do {
         errno = 0;
@@ -410,6 +410,12 @@ recvMsg(
                     mconn_t * mconn = (mconn_t *)msg;
                     uint8 async = NTOH8( mconn->async );
                     mconn->async = async;
+                    uint8 nodelay = NTOH8( mconn->nodelay );
+                    mconn->nodelay = nodelay;
+                    uint8 quickack = NTOH8( mconn->quickack );
+                    mconn->quickack = quickack;
+                    uint8 ecn = NTOH8( mconn->ecn );
+                    mconn->ecn = ecn;
                     uint32 msgsz = NTOH32( mconn->msgsz );
                     mconn->msgsz = msgsz;
                     uint32 sbsz = NTOH32( mconn->sbsz );

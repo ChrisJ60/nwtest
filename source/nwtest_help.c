@@ -29,15 +29,21 @@ help_usage( void )
 
 "\nUsage:\n\n"
 
-"    nwtest h[elp] { h[elp] | u[sage] | g[eneral] | c[lient] |\n"
-"                    s[erver] | m[etrics] | f[ull] }\n\n"
+"    nwtest h[elp] { h[elp] | i[nfo] | u[sage] | g[eneral] |\n"
+"                    c[lient] | s[erver] | m[etrics] | f[ull] }\n\n"
+
+"    nwtest i[nfo]\n\n"
 
 "    nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]\n"
 "                    [-c[onn] <c>] [-l[og] <logpath>]\n\n"
 
 "    nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]\n"
 "                    [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]\n"
+#if defined(ALLOW_TCPECN)
+"                    [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]]\n"
+#else
 "                    [-m[sgsz] <m>] [-l[og] <logpath>]\n"
+#endif /* ALLOW_TCPECN */
 #if defined(ALLOW_BUFFSIZE)
 "                    [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]\n"
 "                    [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]\n"
@@ -71,6 +77,19 @@ help_help( void )
 
     );
 } // help_help
+
+static void
+help_info( void )
+{
+    printf(
+
+"\n"
+"nwtest i[nfo] }\n\n"
+
+"Display information about this utility.\n\n"
+
+    );
+} // help_info
 
 static void
 help_general( void )
@@ -115,7 +134,11 @@ help_client( int brief )
 "\n"
 "nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]\n"
 "                [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]\n"
+#if defined(ALLOW_TCPECN)
+"                [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]]\n"
+#else
 "                [-m[sgsz] <m>] [-l[og] <logpath>]\n"
+#endif /* ALLOW_TCPECN */
 #if defined(ALLOW_BUFFSIZE)
 "                [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]\n"
 "                [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]\n"
@@ -175,6 +198,12 @@ help_client( int brief )
 "to <logpath> with microsecond resolution timestamps. A <logpath> of '-'\n"
 "equates to 'stdout' and '--' equates to 'stderr'.\n\n"
 
+#if defined(ALLOW_TCPECN)
+"If you specify '-ecn', Explicit Congestion Notification is requested for\n"
+"the connection. The system will attempt to negotiate ECN but there is no\n"
+"guarantee that it will succeed and no indication if the negotiation fails.\n\n"
+#endif /* ALLOW_TCPECN */
+
 #if defined(ALLOW_BUFFSIZE)
 "Normally the OS will allocate the sizes for the socket send and receive\n"
 "buffers, and these sizes will be reported in the connection messages. If\n"
@@ -188,6 +217,10 @@ help_client( int brief )
 "%'d. Also, the total of the sizes must be <= %'d. These sizes may\n"
 "be specified using a suffix of 'k' to repesent KB (%'d bytes) or 'm' to\n"
 "represent MB (%'d bytes).\n\n"
+
+"Other factors, such as OS configuration, may place further constraints on\n"
+"the maximum allowed send and receive buffer sizes. Use 'nwtest info' to\n"
+"get more specific information.\n\n"
 #endif /* ALLOW_BUFFSIZE */
 
 #if defined(ALLOW_NODELAY)
@@ -214,7 +247,7 @@ help_client( int brief )
   1024, 1048576,
   MIN_CLT_CONN, MAX_CLT_CONN, DFLT_CLT_CONN
 #if defined(ALLOW_BUFFSIZE)
-  ,MIN_BSZ, MAX_BSZ, getMaxSockBuf(), 1024, 1048576
+  ,MIN_BSZ, MAX_BSZ, MAX_BSZ, 1024, 1048576
 #endif /* ALLOW_BUFFSIZE */
     );
 
@@ -415,9 +448,11 @@ help_metrics( void )
 static void
 help_full( void )
 {
+    printf( "\nVersion %s\n", VERSION );
     help_general();
     help_usage();
     help_help();
+    help_info();
     help_server( 0 );
     help_client( 0 );
     help_metrics();
@@ -426,7 +461,6 @@ help_full( void )
 void
 help( help_t topic, int brief )
 {
-    printf( "\nVersion %s\n", VERSION );
 
     switch (  topic  )
     {
@@ -435,6 +469,9 @@ help( help_t topic, int brief )
             break;
         case HELP:
             help_help();
+            break;
+        case INFO:
+            help_info();
             break;
         case GENERAL:
             help_general();

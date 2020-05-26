@@ -1,7 +1,7 @@
 CC	=    gcc
 CFLAGS	=    -O3
 LDFLAGS	=    -O3
-DEFS	=    
+DEFS	=    -DLINUX
 LIBS    =    -lpthread
 
 #

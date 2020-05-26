@@ -107,14 +107,14 @@ static char buff[256];
             }
             if (  ++argno >= argc  )
             {
-                fprintf( stderr, "error: missing value for '-debug' option\n" );
+                fprintf( stderr, "error: missing value for '-debug'\n" );
                 exit( 99 );
             }
             tmp = hexConvert( argv[argno] );
             if (  ( tmp < DEBUG_NONE ) ||
                   ( tmp > DEBUG_ALL )  )
             {
-                fprintf( stderr, "error: invalid value for '-debug' option\n" );
+                fprintf( stderr, "error: invalid value for '-debug'\n" );
                 exit( 99 );
             }
             debug = (int)tmp;
@@ -144,10 +144,17 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( SERVER, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( SERVER, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-msgsz'\n");
+                exit( 99 );
+            }
             if (  ( tmp < MIN_MSG_SIZE ) ||
                   ( tmp > MAX_MSG_SIZE )  )
-                help( SERVER, 0 );
+            {
+                fprintf( stderr, "error: value for '-msgsz' is out of range (%d - %d)\n",
+                         MIN_MSG_SIZE, MAX_MSG_SIZE );
+                exit( 99 );
+            }
             msgsz = (int)tmp;
         }
         else
@@ -159,11 +166,18 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( SERVER, 1 );
             if (  ! isInteger( 0, argv[argno] )  )
-                help( SERVER, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-conn'\n");
+                exit( 99 );
+            }
             nconn = atoi( argv[argno] );
             if (  ( nconn < MIN_SRV_CONN ) ||
                   ( nconn > MAX_SRV_CONN )  )
-                help( SERVER, 0 );
+            {
+                fprintf( stderr, "error: value for '-conn' is out of range (%d - %d)\n",
+                         MIN_SRV_CONN, MAX_SRV_CONN );
+                exit( 99 );
+            }
         }
         else
         if (  ( strcmp( argv[argno], "-log" ) == 0 ) ||
@@ -527,16 +541,19 @@ receiverThread(
     int          async = 0;
     int          nodelay = 0;
     int          quickack = 0;
+    int          ecn = 0;
     int          connid;
     int          tno;
     int          first = 1;
-    long         onoff = 0;
+    int          onoff = 0;
     int          tcpmaxseg;
     socklen_t    ltcpmaxseg;
     int          sosndbuf;
     socklen_t    lsosndbuf;
     int          sorcvbuf;
     socklen_t    lsorcvbuf;
+    char       * sbind = "";
+    char       * rbind = "";
     uint32       sbsz = 0;
     uint32       rbsz = 0;
     uint32       sseqno = 0;
@@ -608,9 +625,16 @@ receiverThread(
         goto fini;
 
     mconn = (mconn_t *)thread->rcvbuff;
-    async = mconn->async;
+    async =  mconn->async;
+#if defined(ALLOW_NODELAY)
     nodelay = mconn->nodelay;
+#endif /* ALLOW_NODELAY */
+#if defined(ALLOW_QUICKACK)
     quickack = mconn->quickack;
+#endif /* ALLOW_QUICKACK */
+#if defined(ALLOW_TCPECN)
+    ecn = mconn->ecn;
+#endif /* ALLOW_TCPECN */
     msgsz = mconn->msgsz;
     sbsz = mconn->sbsz;
     rbsz = mconn->rbsz;
@@ -618,6 +642,7 @@ receiverThread(
     conn->msgsz = msgsz;
     conn->nodelay = nodelay;
     conn->quickack = quickack;
+    conn->ecn = ecn;
 
     // get some info about the connection
     tcpmaxseg = -1;
@@ -633,10 +658,8 @@ receiverThread(
     if (  getsockopt( conn->rwsock, SOL_SOCKET, SO_RCVBUF, (void *)&sorcvbuf, &lsorcvbuf )  )
         sorcvbuf = -1;
 #if defined(LINUX)
-        if (  sosndbuf > 0  )
-            sosndbuf /= 2;
-        if (  sorcvbuf > 0  )
-            sorcvbuf /= 2;
+        sosndbuf /= 2;
+        sorcvbuf /= 2;
 #endif /* LINUX */
 
 #if defined(ALLOW_NODELAY)
@@ -690,6 +713,11 @@ receiverThread(
             retval = (void *)10;
             goto fini;
         }
+#if defined(LINUX)
+        sosndbuf /= 2;
+#endif /* LINUX */
+        if (  sbsz != sosndbuf  )
+            sbind = "*";
     }
     if (  rbsz && ( rbsz != sorcvbuf )  )
     {
@@ -711,21 +739,20 @@ receiverThread(
             retval = (void *)10;
             goto fini;
         }
-    }
 #if defined(LINUX)
-        if (  sosndbuf > 0  )
-            sosndbuf /= 2;
-        if (  sorcvbuf > 0  )
-            sorcvbuf /= 2;
+        sorcvbuf /= 2;
 #endif /* LINUX */
+        if (  rbsz != sorcvbuf  )
+            rbind = "*";
+    }
 #endif /* ALLOW_BUFFSIZE */
 
     logLock( ctxt );
     printMsg( ctxt, 0, "info: client connected '" );
     printIPaddress( getStdOut(ctxt), conn->peer, conn->lpeer, 1 );
-    fprintf( getStdOut(ctxt), "' (conn = %d, %s, msgsz = %d, maxseg = %d, sndbsz = %d, rcvbsz = %d%s%s)\n",
-             connid, async?"ASYNC":"SYNC", msgsz, tcpmaxseg, sosndbuf, sorcvbuf,
-             nodelay?", nodelay":"", quickack?", quickack":"" );
+    fprintf( getStdOut(ctxt), "' (conn = %d, %s, msgsz = %d, maxseg = %d, %ssndbsz = %d%s, %srcvbsz = %d%s%s%s%s)\n",
+             connid, async?"ASYNC":"SYNC", msgsz, tcpmaxseg, sbind, sosndbuf, sbind, rbind, sorcvbuf, rbind,
+             nodelay?", nodelay":"", quickack?", quickack":"", ecn?", ecn":"" );
     logUnlock( ctxt );
 
     // Send the connection ack message

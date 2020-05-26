@@ -62,6 +62,7 @@ static char buff[256];
     int               v6only = 0;
     int               async = 0;
     int               dur = 0;
+    int               ecn = 0;
     int               nodelay = 0;
     int               quickack = 0;
     int               sbsz = 0;
@@ -75,6 +76,8 @@ static char buff[256];
     int               ramp = -1;
     int               debug = 0;
     int               fdebug = 0;
+    int               maxsendbuf = 0;
+    int               maxrecvbuf = 0;
     int               maxsockbuf = 0;
     long              tmp;
     int               sock;
@@ -99,7 +102,10 @@ static char buff[256];
     ports = argv[argno++];
     port = atoi( ports );
     if (  (port < MIN_PORT) || (port > MAX_PORT)  )
-        help( CLIENT, 0 );
+    {
+        fprintf( stderr, "error: port number is out of range\n");
+        exit( 99 );
+    }
 
     while (  argno < argc )
     {
@@ -113,14 +119,14 @@ static char buff[256];
             }
             if (  ++argno >= argc  )
             {
-                fprintf( stderr, "error: missing value for '-debug' option\n" );
+                fprintf( stderr, "error: missing value for '-debug'\n" );
                 exit( 99 );
             }
             tmp = hexConvert( argv[argno] );
             if (  ( tmp < DEBUG_NONE ) ||
                   ( tmp > DEBUG_ALL )  )
             {
-                fprintf( stderr, "error: invalid value for '-debug' option\n" );
+                fprintf( stderr, "error: invalid value for '-debug'\n" );
                 exit( 99 );
             }
             debug = (int)tmp;
@@ -128,6 +134,16 @@ static char buff[256];
         }
         else
 #endif /* ENABLE_DEBUG */
+#if defined(ALLOW_TCPECN)
+        if (  ( strcmp( argv[argno], "-ecn" ) == 0 ) ||
+              ( strcmp( argv[argno], "-e" ) == 0 )  )
+        {
+            if (  ecn > 0  )
+                help( CLIENT, 1 );
+            ecn = 1;
+        }
+        else
+#endif /* ALLOW_NODELAY */
 #if defined(ALLOW_NODELAY)
         if (  ( strcmp( argv[argno], "-nodelay" ) == 0 ) ||
               ( strcmp( argv[argno], "-n" ) == 0 )  )
@@ -190,7 +206,7 @@ static char buff[256];
               ( strcmp( argv[argno], "-s" ) == 0 )  )
         {
             if (  src != NULL  )
-                help( CLIENT, 0 );
+                help( CLIENT, 1 );
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             src = argv[argno];
@@ -206,10 +222,17 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-sbsz'\n");
+                exit( 99 );
+            }
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-sbsz' is out of range (%d - %d)\n",
+                         MIN_BSZ, MAX_BSZ );
+                exit( 99 );
+            }
             sbsz = (int)tmp;
         }
         else
@@ -220,10 +243,18 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT, 0 );
+            if (  valueConvert( argv[argno], &tmp )  )
+            {
+                fprintf( stderr, "error: invalid value for '-rbsz'\n");
+                exit( 99 );
+            }
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-rbsz' is out of range (%d - %d)\n",
+                         MIN_BSZ, MAX_BSZ );
+                exit( 99 );
+            }
             rbsz = (int)tmp;
         }
         else
@@ -234,10 +265,17 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-srvsbsz'\n");
+                exit( 99 );
+            }
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-srvsbsz' is out of range (%d - %d)\n",
+                         MIN_BSZ, MAX_BSZ );
+                exit( 99 );
+            }
             srvsbsz = (int)tmp;
         }
         else
@@ -248,10 +286,17 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-srvrbsz'\n");
+                exit( 99 );
+            }
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-srvrbsz' is out of range (%d - %d)\n",
+                         MIN_BSZ, MAX_BSZ );
+                exit( 99 );
+            }
             srvrbsz = (int)tmp;
         }
         else
@@ -262,10 +307,17 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-cltsbsz'\n");
+                exit( 99 );
+            }
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-cltsbsz' is out of range (%d - %d)\n",
+                         MIN_BSZ, MAX_BSZ );
+                exit( 99 );
+            }
             cltsbsz = (int)tmp;
         }
         else
@@ -276,10 +328,17 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-cltrbsz'\n");
+                exit( 99 );
+            }
             if (  ( tmp < MIN_BSZ ) ||
                   ( tmp > MAX_BSZ )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-cltrbsz' is out of range (%d - %d)\n",
+                         MIN_BSZ, MAX_BSZ );
+                exit( 99 );
+            }
             cltrbsz = (int)tmp;
         }
         else
@@ -292,11 +351,18 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  ! isInteger( 0, argv[argno] )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-dur'\n");
+                exit( 99 );
+            }
             dur = atoi( argv[argno] );
             if (  ( dur < MIN_DURATION ) ||
                   ( dur > MAX_DURATION )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-dur' is out of range (%d - %d)\n",
+                         MIN_DURATION, MAX_DURATION );
+                exit( 99 );
+            }
         }
         else
         if (  ( strcmp( argv[argno], "-ramp" ) == 0 ) ||
@@ -307,11 +373,18 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  ! isInteger( 0, argv[argno] )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-ramp'\n");
+                exit( 99 );
+            }
             ramp = atoi( argv[argno] );
             if (  ( ramp < MIN_RAMP ) ||
                   ( ramp > MAX_RAMP )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-ramp' is out of range (%d - %d)\n",
+                         MIN_RAMP, MAX_RAMP );
+                exit( 99 );
+            }
         }
         else
         if (  ( strcmp( argv[argno], "-msgsz" ) == 0 ) ||
@@ -322,10 +395,17 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  valueConvert( argv[argno], &tmp )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-msgsz'\n");
+                exit( 99 );
+            }
             if (  ( tmp < MIN_MSG_SIZE ) ||
                   ( tmp > MAX_MSG_SIZE )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-msgsz' is out of range (%d - %d)\n",
+                         MIN_MSG_SIZE, MAX_MSG_SIZE );
+                exit( 99 );
+            }
             msgsz = (int)tmp;
         }
         else
@@ -337,11 +417,18 @@ static char buff[256];
             if (  ++argno >= argc  )
                 help( CLIENT, 1 );
             if (  ! isInteger( 0, argv[argno] )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: invalid value for '-conn'\n");
+                exit( 99 );
+            }
             nconn = atoi( argv[argno] );
             if (  ( nconn < MIN_CLT_CONN ) ||
                   ( nconn > MAX_CLT_CONN )  )
-                help( CLIENT, 0 );
+            {
+                fprintf( stderr, "error: value for '-conn' is out of range (%d - %d)\n",
+                         MIN_CLT_CONN, MAX_CLT_CONN );
+                exit( 99 );
+            }
         }
         else
         if (  ( strcmp( argv[argno], "-log" ) == 0 ) ||
@@ -378,30 +465,45 @@ static char buff[256];
         cltsbsz = srvsbsz = sbsz;
     if (  rbsz )
         cltrbsz = srvrbsz = rbsz;
-    maxsockbuf = getMaxSockBuf();
-    if (  srvsbsz || srvrbsz  )
-    {
-        if (  ( srvsbsz > maxsockbuf ) ||
-              ( srvrbsz > maxsockbuf ) ||
-              ( ( srvsbsz + srvrbsz ) > maxsockbuf )  )
-            help( CLIENT, 0 );
-    }
+    getMaxSockBuf( &maxsendbuf, &maxrecvbuf);
+    maxsockbuf = maxsendbuf + maxrecvbuf;
     if (  cltsbsz || cltrbsz  )
     {
-        if (  ( cltsbsz > maxsockbuf ) ||
-              ( cltrbsz > maxsockbuf ) ||
-              ( ( cltsbsz + cltrbsz ) > maxsockbuf )  )
-            help( CLIENT, 0 );
+        if (  cltsbsz > maxsendbuf  )
+        {
+            fprintf( stderr, "error: value for client send buffer size is too large (%d > %d)\n",
+                     cltsbsz, maxsendbuf );
+            exit( 99 );
+        }
+        if (  cltrbsz > maxrecvbuf  )
+        {
+            fprintf( stderr, "error: value for client receive buffer size is too large (%d > %d)\n",
+                     cltrbsz, maxrecvbuf );
+            exit( 99 );
+        }
+        if (  ( cltsbsz + cltrbsz ) > maxsockbuf  )
+        {
+            fprintf( stderr, "error: total of client send and receive buffer sizes is to large (%d > %d)\n",
+                     (cltsbsz + cltrbsz), maxsockbuf  );
+            exit( 99 );
+        }
     }
 
     if (  src != NULL  )
     {
         if (  ( v4only && ! isIPv4Address( src ) ) ||
               ( v6only && ! isIPv6Address( src ) )  )
-            help( CLIENT, 1 );
+        {
+            fprintf( stderr, "error: address type mismatch between -4/-6 and source address\n" );
+            exit( 99 );
+        }
         if (  ( isIPv4Address( host ) && ! isIPv4Address( src ) ) ||
               ( isIPv6Address( host ) && ! isIPv6Address( src ) )  )
-            help( CLIENT, 0 );
+        {
+            fprintf( stderr, "error: address type mismatch between '%s' and '%s'\n",
+                     host, src );
+            exit( 99 );
+        }
         if (  isIPv4Address( src )  )
             v4only = 1;
         else
@@ -427,6 +529,10 @@ static char buff[256];
         fprintf( stderr, "error: memory allocation failed (context)\n" );
         return 3;
     }
+#if defined(ALLOW_TCPECN)
+    if (  ecn  )
+        (*ctxt)->ecn = ECN_ON;
+#endif /* ALLOW_NODELAY */
 #if defined(ALLOW_NODELAY)
     if (  nodelay  )
         (*ctxt)->nodelay = NODELAY_ON;
@@ -841,7 +947,6 @@ senderThread(
            printErr( ctxt, 1, "DEBUG: Sthread %d/%d sending MSG_CONN\n", connid, tno ) )
     mconn->hdr.seqno = HTON32( sseqno );
     sseqno++;
-    mconn->async = HTON8( async );
     mconn->sbsz = HTON32( srvsbsz );
     mconn->rbsz = HTON32( srvrbsz );
     csrcats = getTS( 0 );
@@ -1094,7 +1199,7 @@ clientConnect(
 {
     struct addrinfo * addr = NULL;
     int sock = -1, ret = 0;
-    long onoff = 1;
+    int onoff = 1;
 
     if (  ctxt == NULL  )
         return sock;
@@ -1135,16 +1240,26 @@ clientConnect(
                     close( sock );
                     sock = -1;
                     ret = 1;
+                    ctxt->error = "bind() failed for source address";
                 }
             }
-#if defined( USE_TCPECN ) && defined( TCP_ENABLE_ECN )
-            errno = 0;
-            if (  setsockopt( sock, IPPROTO_TCP, TCP_ENABLE_ECN, (void *)&onoff, sizeof( onoff ) )  )
+#if defined( ALLOW_TCPECN )
+            if (  ctxt->ecn  )
             {
-                DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
-                       printErr( ctxt, 1, "DEBUG: failed to enable ECN: %d (%s)\n", errno, strerror(errno) ) )
+                errno = 0;
+                if (  setsockopt( sock, IPPROTO_TCP, TCP_ENABLE_ECN, (void *)&onoff, sizeof( onoff ) )  )
+                {
+                    DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
+                           printErr( ctxt, 1, "DEBUG: failed to enable ECN: %d (%s)\n", errno, strerror(errno) ) )
+                    close( sock );
+                    sock = -1;
+                    ret = 1;
+                    ctxt->error = "failed to request TCPECN";
+                }
+                else
+                    ctxt->ecnon = 1;
             }
-#endif /* USE_TCP_ECN */
+#endif /* ALLOW_TCPECN */
             if (  ret == 0  )
             {
                 errno = 0;
@@ -1154,11 +1269,10 @@ clientConnect(
                     DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection failed\n" ) )
                     close( sock );
                     sock = -1;
+                    ctxt->error = "connect() failed";
                 }
                 else
-                {
                     DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection successful (%d)\n", sock ) );
-                }
             }
         }
         return sock;
@@ -1210,8 +1324,27 @@ clientConnect(
                         close( sock );
                         sock = -1;
                         ret = 1;
+                        ctxt->error = "bind() failed for source address";
                     }
                 }
+#if defined( ALLOW_TCPECN )
+                ctxt->ecnon = 0;
+                if (  ctxt->ecn  )
+                {
+                    errno = 0;
+                    if (  setsockopt( sock, IPPROTO_TCP, TCP_ENABLE_ECN, (void *)&onoff, sizeof( onoff ) )  )
+                    {
+                        DEBUG( DEBUG_CONNECT, ctxt->debug, 1,
+                               printErr( ctxt, 1, "DEBUG: failed to enable ECN: %d (%s)\n", errno, strerror(errno) ) )
+                        close( sock );
+                        sock = -1;
+                        ret = 1;
+                        ctxt->error = "failed to request TCPECN";
+                    }
+                    else
+                        ctxt->ecnon = 1;
+                }
+#endif /* ALLOW_TCPECN */
                 if (  ret == 0  )
                 {
                     errno = 0;
@@ -1227,6 +1360,10 @@ clientConnect(
                     else
                     {
                         DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection failed\n" ) );
+                        close( sock );
+                        sock = -1;
+                        ret = 1;
+                        ctxt->error = "connect() failed";
                     }
                 }
             }
@@ -1278,8 +1415,27 @@ clientConnect(
                         close( sock );
                         sock = -1;
                         ret = 1;
+                        ctxt->error = "bind() failed for source address";
                     }
                 }
+#if defined( ALLOW_TCPECN )
+                ctxt->ecnon = 0;
+                if (  ctxt->ecn  )
+                {
+                    errno = 0;
+                    if (  setsockopt( sock, IPPROTO_TCP, TCP_ENABLE_ECN, (void *)&onoff, sizeof( onoff ) )  )
+                    {
+                        DEBUG( DEBUG_CONNECT, ctxt->debug, 1,
+                               printErr( ctxt, 1, "DEBUG: failed to enable ECN: %d (%s)\n", errno, strerror(errno) ) )
+                        close( sock );
+                        sock = -1;
+                        ret = 1;
+                        ctxt->error = "failed to request TCPECN";
+                    }
+                    else
+                        ctxt->ecnon = 1;
+                }
+#endif /* ALLOW_TCPECN */
                 if (  ret == 0  )
                 {
                     errno = 0;
@@ -1294,6 +1450,10 @@ clientConnect(
                     else
                     {
                         DEBUG( DEBUG_CONNECT, ctxt->debug, 1, printErr( ctxt, 1, "DEBUG: connection failed\n" ) );
+                        close( sock );
+                        sock = -1;
+                        ret = 1;
+                        ctxt->error = "connect() failed";
                     }
                 }
             }
@@ -1391,8 +1551,9 @@ handoffConn(
 {
     int ret = 0;
     conn_t * conn = NULL;
-    long nodelay;
-    long quickack;
+    int nodelay;
+    int quickack;
+    int ecn;
     struct timeval rcvto = { MAX_MSG_WAIT, 0 };
     struct timeval sndto = { MAX_MSG_WAIT, 0 };
 
@@ -1410,6 +1571,7 @@ handoffConn(
     conn->rwsock = srvsock;
     nodelay = conn->nodelay = ctxt->nodelay;
     quickack = conn->quickack = ctxt->quickack;
+    ecn = conn->ecn = ctxt->ecn;
     if (  setsockopt( conn->rwsock, SOL_SOCKET, SO_RCVTIMEO, (void *)&rcvto, sizeof( struct timeval ) ) ||
 #if defined(ALLOW_NODELAY)
           setsockopt( conn->rwsock, IPPROTO_TCP, TCP_NODELAY, (void *)&nodelay, sizeof( nodelay ) ) ||
@@ -1658,7 +1820,8 @@ displayStats(
     printMsg( ctxt, 0, "\n" );
     printMsg( ctxt, 0, "Mode                 : %s\n", (ctxt->mode==ASYNC)?"ASYNC":"SYNC" );
     printMsg( ctxt, 0, "Message size         : %'d bytes\n", ctxt->msgsz );
-    if (  ctxt->srvsbsz || ctxt->srvrbsz || ctxt->cltsbsz || ctxt->cltrbsz || ctxt->nodelay || ctxt->quickack  )
+    if (  ctxt->srvsbsz || ctxt->srvrbsz || ctxt->cltsbsz || ctxt->cltrbsz ||
+          ctxt->nodelay || ctxt->quickack || ctxt->ecnon  )
     {
         printMsg( ctxt, 0, "Options              :" );
         if (  ctxt->srvsbsz  )
@@ -1673,6 +1836,8 @@ displayStats(
             printMsg( ctxt, 0, " nodelay" );
         if (  ctxt->quickack  )
             printMsg( ctxt, 0, " quickack" );
+        if (  ctxt->ecnon  )
+            printMsg( ctxt, 0, " tcpecn" );
         printMsg( ctxt, 0, "\n" );
     }
     printMsg( ctxt, 0, "Connections          : %'d\n", ctxt->nconn );
@@ -1775,7 +1940,7 @@ displayStats(
  */
 
 /*
- * process the server sub-command
+ * process the client sub-command
  */
 
 int
@@ -1799,6 +1964,8 @@ cmdClient(
     socklen_t lsosndbuf;
     int sorcvbuf;
     socklen_t lsorcvbuf;
+    char * sbind;
+    char * rbind;
     struct timeval stout;
     struct addrinfo * srvaddr = NULL;
     socklen_t lcltaddr = 0;
@@ -1824,6 +1991,7 @@ cmdClient(
     // Connect all the connection sockets
     for ( connid = 0; connid < ctxt->nconn; connid++ )
     {
+        sbind = rbind = "";
         if (  stopReceived()  )
         {
             ret = INTR_EXIT;
@@ -1868,10 +2036,8 @@ cmdClient(
         if (  getsockopt( ctxt->conn[connid]->rwsock, SOL_SOCKET, SO_RCVBUF, (void *)&sorcvbuf, &lsorcvbuf )  )
             sorcvbuf = -1;
 #if defined(LINUX)
-        if (  sosndbuf > 0  )
-            sosndbuf /= 2;
-        if (  sorcvbuf > 0  )
-            sorcvbuf /= 2;
+        sosndbuf /= 2;
+        sorcvbuf /= 2;
 #endif /* LINUX */
 
 #if defined(ALLOW_BUFFSIZE)
@@ -1897,6 +2063,11 @@ cmdClient(
                 ret = 32;
                 goto fini;
             }
+#if defined(LINUX)
+            sosndbuf /= 2;
+#endif /* LINUX */
+            if (  ctxt->cltsbsz != sosndbuf  )
+                sbind="*";
         }
         if (  ctxt->cltrbsz && ( ctxt->cltrbsz != sorcvbuf )  )
         {
@@ -1919,20 +2090,19 @@ cmdClient(
                 ret = 33;
                 goto fini;
             }
-        }
 #if defined(LINUX)
-        if (  sosndbuf > 0  )
-            sosndbuf /= 2;
-        if (  sorcvbuf > 0  )
             sorcvbuf /= 2;
 #endif /* LINUX */
+            if (  ctxt->cltrbsz != sorcvbuf  )
+                rbind="*";
+        }
 #endif /* ALLOW_BUFFSIZE */
 
         printMsg( ctxt, 0, "info: connected to '" );
         printIPaddress( getStdOut(ctxt), srvaddr->ai_addr, srvaddr->ai_addrlen, 1 );
-        fprintf( getStdOut( ctxt ), "' (conn = %d, %s, msgsz = %d, maxseg = %d, sndbsz = %d, rcvbsz = %d%s%s)\n",
-                 connid, (ctxt->mode==ASYNC)?"ASYNC":"SYNC", ctxt->msgsz, tcpmaxseg, sosndbuf, sorcvbuf,
-                 ctxt->nodelay?", nodelay":"", ctxt->quickack?", quickack":"" );
+        fprintf( getStdOut( ctxt ), "' (conn = %d, %s, msgsz = %d, maxseg = %d, %ssndbsz = %d%s, %srcvbsz = %d%s%s%s%s)\n",
+                 connid, (ctxt->mode==ASYNC)?"ASYNC":"SYNC", ctxt->msgsz, tcpmaxseg, sbind, sosndbuf, sbind, rbind, sorcvbuf, rbind,
+                 ctxt->nodelay?", nodelay":"", ctxt->quickack?", quickack":"", ctxt->ecnon?", ecn":"" );
     }
 
     // Hand off connections to dedicated threads

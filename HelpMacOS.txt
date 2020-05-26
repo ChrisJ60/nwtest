@@ -1,0 +1,296 @@
+
+Version 2.3
+
+This program implements a network response time and throughput test.
+
+The program can be run as either a client or a server. The client opens one
+or more connections to a server and exchanges messages of a given size with
+the server for a given period of time. At the end of the test period, various
+performance metrics are displayed.
+
+The test can run in two modes. In synchronous (request/response) mode, each
+connection has a single thread in both the client and the server. Once the
+connection is established the client sends a message to the server and waits
+for a response. As soon as the server receives a message it sends it straight
+back to the client. This sequence is repeated until the test ends.
+
+In asynchronous (streaming) mode, each connection has two threads in both the
+client and the server. Once the connection is established the client sends a
+continuous stream of messages to the server and the server simultaneously
+sends a continuous stream of messages to the client.
+
+The size of the messages exchanged, the duration of the test measurement phase,
+the amount of load ramp-up and ramp-down time and the number of connections
+(and hence threads) are all configurable.
+
+The defaults for the various configurable parameters have been carefully chosen
+such that using the defaults will generally give a meaningful result. The main
+parameters that you might vary in normal usage are the message size and the
+number of connections.
+
+
+Usage:
+
+    nwtest h[elp] { h[elp] | i[nfo] | u[sage] | g[eneral] |
+                    c[lient] | s[erver] | m[etrics] | f[ull] }
+
+    nwtest i[nfo]
+
+    nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]
+                    [-c[onn] <c>] [-l[og] <logpath>]
+
+    nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]
+                    [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]
+                    [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]]
+                    [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]
+                    [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]
+                    [-n[odelay]] [-q[uickack]] [-b[rief]|-v[erbose]]
+
+
+nwtest h[elp] { u[sage] | g[eneral] | c[lient] | s[erver] | m[etrics] | f[ull] }
+
+Display help on the specified topic.
+
+
+nwtest i[nfo] }
+
+Display information about this utility.
+
+
+nwtest s[erver] <port> [-4|-6] [-h[ost] <h>] [-m[sgsz] <m>]
+                       [-c[onn] <c>] [-l[og] <logpath>]
+
+Run as a server on local port <port>. If a specific host is specified (<h>)
+then bind to the address(es) for that host, otherwise bind to INADDR[6]_ANY.
+The host can be specified as a hostname or an IP address (IPv4 or IPv6);
+the address specified must be an address for an interface on the local system.
+If a hostname is specified then you can use the '-4' or '-6' options to limit
+communication to IPv4 or IPv6.
+
+The maximum message size, in bytes, that the server will accept is specified
+by <m> where 28 <= <m> <= 1,048,576. Connections requesting a message size
+larger than this will be rejected. The default is 1,048,576. This size
+represents the size of the user data; it excludes network protocol overheads
+(ethernet, IPv4/6 etc.). The size may be specified using a suffix of 'k' to
+repesent KB (1,024 bytes) or 'm' to represent MB (1,048,576 bytes).
+
+The maximum number of concurrent connections that the server will allow is set
+using <c> where 2 <= <c> <= 128. Connections that exceed this number will
+be rejected. The default is 32.
+
+Normally all output goes to stdout/stderr, but if '-log' is specified then
+after initial argument parsing any subsequent messages will be written only
+to <logpath> with microsecond resolution timestamps. A <logpath> of '-'
+equates to 'stdout' and '--' equates to 'stderr'.
+
+
+nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]
+                [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]
+                [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]]
+                [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]
+                [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]
+                [-n[odelay]] [-q[uickack]] [-b[rief]|-v[erbose]]
+
+Run as a client connecting to a server at host <host> and port <port>. The
+host can be specified as either a host name or an IP address (IPv4 or IPv6).
+If a hostname is specified then you can use the '-4' or '-6' options to limit
+communication to IPv4 or IPv6.
+
+Normally the OS will determine the local source IP address (interface) to use
+for the outgoing connection, but this can be overridden by specifying an
+explicit local address using the '-src' option. This value must be an IP
+address, not a hostname, and it must correspond to the address of an
+interface on the local system. If <host> has been specified using an IP
+address then the address type (IPv4 or IPv6) for <srcaddr> must be the same
+as that of <host>. Furthermore, if the allowed connection type has been
+restricted by way of '-4' or '-6' then the value of <srcaddr> must be of
+the selected type.
+
+By default the test is performed in request/response (synchronous) mode but
+if '-async' is specified the test is performed in streaming mode.
+
+The measurement part of the test will run for <d> seconds with a ramp-up/down
+of <r> seconds. 10 <= <d> <= 300 with a default of 30 and 0 <= <r> <= 30
+with a default of 10.
+
+The message size used for the test is specified by <m> where 28 <= <m> <=
+1,048,576 with a default of 1,024. This size represents the size of the user
+data; it excludes network protocol overheads (ethernet, IPv4/6 etc.). The
+size may be specified using a suffix of 'k' to repesent KB (1,024 bytes) or
+'m' to represent MB (1,048,576 bytes).
+
+The number of concurrent connections used is specified by <c> where 1 <= <c>
+<= 64 with a default of 1.
+
+Normally all output goes to stdout/stderr, but if '-log' is specified then
+after initial argument parsing any subsequent messages will be written only
+to <logpath> with microsecond resolution timestamps. A <logpath> of '-'
+equates to 'stdout' and '--' equates to 'stderr'.
+
+If you specify '-ecn', Explicit Congestion Notification is requested for
+the connection. The system will attempt to negotiate ECN but there is no
+guarantee that it will succeed and no indication if the negotiation fails.
+
+Normally the OS will allocate the sizes for the socket send and receive
+buffers, and these sizes will be reported in the connection messages. If
+you want to use specific values for the socket send and receive buffer
+sizes then you can do so using '-sbsz' (sets size for send buffer on both
+client and server), '-rbsz' (sets size for the receive buffer on both client
+and server), '-srvsbsz' (sets size for send buffer on server), '-srvrbsz'
+(sets size for receive buffer on server), '-cltsbsz' (sets size for send
+buffer on client) and '-cltrbsz' (sets size for receive buffer on client).
+These values are specified in bytes and each must be between 4,096 and
+4,194,304. Also, the total of the sizes must be <= 4,194,304. These sizes may
+be specified using a suffix of 'k' to repesent KB (1,024 bytes) or 'm' to
+represent MB (1,048,576 bytes).
+
+Other factors, such as OS configuration, may place further constraints on
+the maximum allowed send and receive buffer sizes. Use 'nwtest info' to
+get more specific information.
+
+If '-nodelay' is specified then the TCP_NODELAY option is enabled on all
+sockets used for data transfer in both the client and the server.
+
+If '-quickack' is specified then the TCP_SENDMOREACKS option is enabled on
+all sockets used for data transfer in both the client and the server.
+
+Normally only aggregate performance metrics are displayed, but if '-verbose'
+is specified then per connection metrics are also displayed. If '-brief' is
+specified then just key metrics are displayed on a single line.
+
+
+For each connection successfully established, the client and server will
+report the TCP MSS (maxseg) value and the size of the socket send and
+receive buffers (sndbsz anb rcvbsz).
+
+The metrics measured and reported by this program for each test mode are
+as follows; all references to 'data' and 'throughput' refer to application
+data excluding network overheads.
+
+All modes
+---------
+
+Elapsed time       - The wall clock elapsed time for the measurement part
+                     of the test (excludes ramp up/down time).
+
+User CPU time      - The amount of user CPU time consumed during the
+                     elapsed time.
+
+System CPU time    - The amount of system CPU time consumed during the
+                     elapsed time.
+
+Total CPU time     - User time plus system time.
+
+Process CPU usage  - The average CPU usage for the nwtest process during
+                     the elapsed time, expressed as a percentage of one
+                     CPU core.
+
+System CPU usage   - The average CPU usage for the nwtest process during
+                     the elapsed time, expressed as a percentage of total
+                     available system CPU resources.
+
+Sync (request/response) mode
+----------------------------
+
+Total messages     - The total number of data messages sent during the
+                     measurement period. The number of received messages
+                     is the same.
+
+Total data         - The total number of bytes sent during the measurement
+                     period. The number of received bytes is the same.
+
+Avg measure time   - The average measurement time across all threads (µs).
+
+Start variance     - The maximum difference between the start times of all
+                     the threads (µs). Only displayed if connections > 1.
+
+Run variance       - The maximum difference between the measurement times of
+                     all the threads (µs). Only displayed if connections > 1.
+
+Throughput         - The send throughput, aggregated across all connections,
+                     during the measurement period (bytes/second).
+
+Minimum R/T        - The lowest round trip time across all connections during
+                     the measurement period (µs).
+
+Average R/T        - The average round trip time across all connections during
+                     the measurement period (µs).
+
+Maximum R/T        - The highest round trip time across all connections during
+                     the measurement period (µs).
+
+In brief mode the output consists of a single line as follows:
+
+info: results S,<nconn>,<throughput>,<minrt>,<avgrt>,<maxrt>,<proccpu>,<syscpu>
+
+Async (streaming) mode
+----------------------
+
+Total msg sent     - The total number of messages sent during the measurement
+                     period.
+
+Total msg rcvd     - The total number of messages received during the
+                     measurement period.
+
+Total data sent    - The total number of bytes sent during the measurement
+                     period.
+
+Total data rcvd    - The total number of bytes received during the measurement
+                     period.
+
+Avg measure time   - The average measurement time across all threads (µs).
+
+Start variance     - The maximum difference between the start times of all
+                     the threads (µs).
+
+Run variance       - The maximum difference between the measurement times of
+                     all the threads (µs).
+
+Send throughput    - The send throughput, aggregated across all connections,
+                     during the measurement period (bytes/second).
+
+Recv throughput    - The receive throughput, aggregated across all connections,
+                     during the measurement period (bytes/second).
+
+Average throughput - The average of the send and receive throughputs.
+
+In brief mode the output consists of a single line as follows:
+
+info: results A,<nconn>,<sendthroughput>,<recvthroughput>,<proccpu>,<syscpu>
+
+Network overheads
+-----------------
+
+The message size that you specify defines the size of the 'application data'
+in each message sent or received. The actual amount of data for each message
+will be larger than this due to various network and protocol related overheads.
+
+For IPv4/TCP, there is at least 28 bytes of overhead per message and in unusual
+cases this may be as much as 36 bytes. In addition the TCPv4 header is another
+24 bytes. In most cases, for this program, the IPv4 packet size will be <message
+size> + 52 bytes.
+
+For IPv6/TCP, there is at least 72 bytes of overhead per message and in unusual
+cases this may be more due to additional header fields (each is 8 bytes). In
+most cases, for this program, the IPv6 packet size will be <message size> + 72
+bytes.
+
+For Ethernet the standard Maximum Transmission Unit (MTU) is 1500 bytes. Each
+IP packet will be sent as a sequence of one or more Ethernet frames. Each frame
+has some overhead; normally this is 38 bytes but if 802.1q VLANs are being used
+it will be 42 bytes.
+
+For WiFi the standard Maximum Transmission Unit (MTU) is 1500 bytes. Each IP
+packet will be sent as a sequence of one or more WiFi frames. Each frame has
+some overhead; normally this is 36 bytes but it may be as much as 44 bytes.
+
+To give this some context, with the default test message size of 1024 bytes the
+IPv4 packet size will be 1076 bytes and the IPv6 packet size will be 1096 bytes.
+Both will therefore fit into a single Ethernet/WiFi frame. The associated
+Ethernet frame will be 1114 bytes for IPv4 and 1134 bytes for IPv6.
+
+With a 1 Gbit/s Ethernet network, the maximum theoretical throughput will be
+112,208 frames/s for IPv4 and 110,229 frames/s for IPv6. This translates to
+a theoretical maximum application data rate of 109.5 Mbyte/s for IPv4 and
+107.6 Mbyte/s for IPv6.
+

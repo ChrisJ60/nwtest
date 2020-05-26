@@ -1,1 +1,1 @@
-nwtest version 2.2
+nwtest version 2.3
