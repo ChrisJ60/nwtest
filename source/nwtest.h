@@ -23,7 +23,7 @@
  * Configuration things. These can be changed (with care).
  */
 #define  PROGNAME          "NWTEST"
-#define  VERSION           "2.3"
+#define  VERSION           "2.5"
 
 #define  ENABLE_DEBUG      1
 #define  ALLOW_NODELAY     1
@@ -83,6 +83,7 @@
 #define  INTR_EXIT         127
 #define  KB_MULT           1024L
 #define  MB_MULT           (KB_MULT * KB_MULT)
+#define  ECN_DFLT          (-1)
 #define  ECN_OFF           0
 #define  ECN_ON            1
 #define  NODELAY_OFF       0
@@ -119,7 +120,7 @@
  * Types
  */
 
-typedef enum { USAGE, HELP, INFO, GENERAL, SERVER, CLIENT, METRICS, FULL } help_t;
+typedef enum { DEBUG, USAGE, HELP, INFO, GENERAL, SERVER, CLIENT, METRICS, FULL } help_t;
 typedef enum { DEFUNCT, RUNNING, RAMP, MEASURE, END, STOP, FINISHED } tstate_t;
 typedef enum { SENDER, RECEIVER } ttype_t;
 typedef enum { ANY, SYNC, ASYNC } tmode_t;
@@ -265,6 +266,7 @@ struct s_conn
     int               nodelay;
     int               quickack;
     int               ecn;
+    int               ecnon;
     volatile int      busy;
     volatile int      ready;
     long              startts;

@@ -1,5 +1,5 @@
 
-Version 2.3
+Version 2.5
 
 This program implements a network response time and throughput test.
 
@@ -41,7 +41,7 @@ Usage:
 
     nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]
                     [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]
-                    [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]]
+                    [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]|-noe[cn]]
                     [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]
                     [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]
                     [-n[odelay]] [-q[uickack]] [-b[rief]|-v[erbose]]
@@ -86,7 +86,7 @@ equates to 'stdout' and '--' equates to 'stderr'.
 
 nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]
                 [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]
-                [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]]
+                [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]|-noe[cn]]
                 [-sbsz <sbsz> | [[-srvsbsz <srvsbsz>] [-cltsbsz <cltsbsz>]]
                 [-rbsz <rbsz> | [[-srvrbsz <srvrbsz>] [-cltrbsz <cltrbsz>]]
                 [-n[odelay]] [-q[uickack]] [-b[rief]|-v[erbose]]
@@ -130,6 +130,9 @@ equates to 'stdout' and '--' equates to 'stderr'.
 If you specify '-ecn', Explicit Congestion Notification is requested for
 the connection. The system will attempt to negotiate ECN but there is no
 guarantee that it will succeed and no indication if the negotiation fails.
+
+If you specify '-noecn', Explicit Congestion Notification is disabled for
+the connection.
 
 Normally the OS will allocate the sizes for the socket send and receive
 buffers, and these sizes will be reported in the connection messages. If

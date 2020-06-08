@@ -554,6 +554,7 @@ receiverThread(
     socklen_t    lsorcvbuf;
     char       * sbind = "";
     char       * rbind = "";
+    char       * ecnval = "";
     uint32       sbsz = 0;
     uint32       rbsz = 0;
     uint32       sseqno = 0;
@@ -747,12 +748,19 @@ receiverThread(
     }
 #endif /* ALLOW_BUFFSIZE */
 
+#if defined(ALLOW_TCPECN)
+    if (  ecn == ECN_OFF  )
+        ecnval = ", ecn=off";
+    else
+    if (  ecn == ECN_ON  )
+        ecnval = ", ecn=on";
+#endif /* ALLOW_TCPECN */
     logLock( ctxt );
     printMsg( ctxt, 0, "info: client connected '" );
     printIPaddress( getStdOut(ctxt), conn->peer, conn->lpeer, 1 );
     fprintf( getStdOut(ctxt), "' (conn = %d, %s, msgsz = %d, maxseg = %d, %ssndbsz = %d%s, %srcvbsz = %d%s%s%s%s)\n",
              connid, async?"ASYNC":"SYNC", msgsz, tcpmaxseg, sbind, sosndbuf, sbind, rbind, sorcvbuf, rbind,
-             nodelay?", nodelay":"", quickack?", quickack":"", ecn?", ecn":"" );
+             nodelay?", nodelay":"", quickack?", quickack":"", ecnval );
     logUnlock( ctxt );
 
     // Send the connection ack message
@@ -1139,14 +1147,6 @@ cmdServer(
     int sno = 0;
     int finished = 0;
     int one = 1;
-#if 0
-    int tcpmaxseg;
-    socklen_t ltcpmaxseg;
-    int sosndbuf;
-    socklen_t lsosndbuf;
-    int sorcvbuf;
-    socklen_t lsorcvbuf;
-#endif
     int nready;
     int connid;
     fd_set lfds;

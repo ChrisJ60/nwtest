@@ -40,7 +40,7 @@ help_usage( void )
 "    nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]\n"
 "                    [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]\n"
 #if defined(ALLOW_TCPECN)
-"                    [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]]\n"
+"                    [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]|-noe[cn]]\n"
 #else
 "                    [-m[sgsz] <m>] [-l[og] <logpath>]\n"
 #endif /* ALLOW_TCPECN */
@@ -92,6 +92,28 @@ help_info( void )
 } // help_info
 
 static void
+help_debug( void )
+{
+    printf(
+
+"\nYou can selectively enable debug output in create, client and server modes\n"
+"using the command line option '-debug 0xnn'. 'nn' is a 2 digit hex value which\n"
+"is a bit mask controlling which debug information you want to see.\n\n"
+
+"Currently the available choices are:\n\n"
+
+"    0   -  No debug output (same as not specifying -debug at all)\n"
+"    1   -  Debug info related to sending data\n"
+"    2   -  Debug info related to receiving data\n"
+"    4   -  Debug info related to connecting\n"
+"    8   -  Debug info related other operations\n"
+
+"\nDebug information is written to 'stderr' and is prefixed with 'DEBUG:'.\n\n"
+
+    );
+} // help_debug
+
+static void
 help_general( void )
 {
     printf(
@@ -135,7 +157,7 @@ help_client( int brief )
 "nwtest c[lient] <host> <port> [-s[rc] <srcaddr>] [-4|-6] [-a[sync]]\n"
 "                [-c[onn] <c>] [-d[ur] <d>] [-r[amp] <r>]\n"
 #if defined(ALLOW_TCPECN)
-"                [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]]\n"
+"                [-m[sgsz] <m>] [-l[og] <logpath>] [-e[cn]|-noe[cn]]\n"
 #else
 "                [-m[sgsz] <m>] [-l[og] <logpath>]\n"
 #endif /* ALLOW_TCPECN */
@@ -202,6 +224,9 @@ help_client( int brief )
 "If you specify '-ecn', Explicit Congestion Notification is requested for\n"
 "the connection. The system will attempt to negotiate ECN but there is no\n"
 "guarantee that it will succeed and no indication if the negotiation fails.\n\n"
+
+"If you specify '-noecn', Explicit Congestion Notification is disabled for\n"
+"the connection.\n\n"
 #endif /* ALLOW_TCPECN */
 
 #if defined(ALLOW_BUFFSIZE)
@@ -464,6 +489,11 @@ help( help_t topic, int brief )
 
     switch (  topic  )
     {
+#if defined(ENABLE_DEBUG)
+        case DEBUG:
+            help_debug();
+            break;
+#endif /* ENABLE_DEBUG */
         case USAGE:
             help_usage();
             break;

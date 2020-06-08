@@ -63,6 +63,7 @@ static char buff[256];
     int               async = 0;
     int               dur = 0;
     int               ecn = 0;
+    int               noecn = 0;
     int               nodelay = 0;
     int               quickack = 0;
     int               sbsz = 0;
@@ -138,9 +139,17 @@ static char buff[256];
         if (  ( strcmp( argv[argno], "-ecn" ) == 0 ) ||
               ( strcmp( argv[argno], "-e" ) == 0 )  )
         {
-            if (  ecn > 0  )
+            if (  ecn || noecn  )
                 help( CLIENT, 1 );
             ecn = 1;
+        }
+        else
+        if (  ( strcmp( argv[argno], "-noecn" ) == 0 ) ||
+              ( strcmp( argv[argno], "-noe" ) == 0 )  )
+        {
+            if (  ecn || noecn  )
+                help( CLIENT, 1 );
+            noecn = 1;
         }
         else
 #endif /* ALLOW_NODELAY */
@@ -532,6 +541,9 @@ static char buff[256];
 #if defined(ALLOW_TCPECN)
     if (  ecn  )
         (*ctxt)->ecn = ECN_ON;
+    else
+    if (  noecn  )
+        (*ctxt)->ecn = ECN_OFF;
 #endif /* ALLOW_NODELAY */
 #if defined(ALLOW_NODELAY)
     if (  nodelay  )
@@ -636,18 +648,28 @@ allThreadsOK(
         if (  (ctxt->conn[connid]->sender == NULL) ||
               (ctxt->conn[connid]->receiver == NULL)  )
         {
+            DEBUG( DEBUG_OTHER, ctxt->debug, 1, 
+                   printErr( ctxt, 0, "DEBUG: connid = %d: sender or receiver is NULL\n", connid ) )
             ok = 0;
             break;
         }
         if (  (ctxt->conn[connid]->sender->retcode != 0) ||
               (ctxt->conn[connid]->receiver->retcode != 0)  )
         {
+            DEBUG( DEBUG_OTHER, ctxt->debug, 1,
+                   printErr( ctxt, 0, "DEBUG: connid = %d: bad retcode: s=%d / r=%d\n", 
+                             connid, ctxt->conn[connid]->sender->retcode,
+                             ctxt->conn[connid]->receiver->retcode ) )
             ok = 0;
             break;
         }
         if (  (ctxt->conn[connid]->sender->startts <= 0) ||
               (ctxt->conn[connid]->sender->stopts <= ctxt->conn[connid]->sender->startts)  )
         {
+            DEBUG( DEBUG_OTHER, ctxt->debug, 1,
+                   printErr( ctxt, 0, "DEBUG: connid = %d: sender bad timing data: start=%'ld / stop=%'ld\n", 
+                             connid, ctxt->conn[connid]->sender->startts,
+                             ctxt->conn[connid]->sender->stopts ) )
             ok = 0;
             break;
         }
@@ -655,6 +677,10 @@ allThreadsOK(
               ( (ctxt->conn[connid]->receiver->startts <= 0) ||
                 (ctxt->conn[connid]->receiver->stopts <= ctxt->conn[connid]->receiver->startts) )  )
         {
+            DEBUG( DEBUG_OTHER, ctxt->debug, 1,
+                   printErr( ctxt, 0, "DEBUG: connid = %d: receiver bad timing data: start=%'ld / stop=%'ld\n", 
+                             connid, ctxt->conn[connid]->receiver->startts,
+                             ctxt->conn[connid]->receiver->stopts ) )
             ok = 0;
             break;
         }
@@ -1244,20 +1270,22 @@ clientConnect(
                 }
             }
 #if defined( ALLOW_TCPECN )
-            if (  ctxt->ecn  )
+            if (  (ctxt->ecn == ECN_ON) || (ctxt->ecn == ECN_OFF)  )
             {
+                onoff = (ctxt->ecn == ECN_ON);
                 errno = 0;
                 if (  setsockopt( sock, IPPROTO_TCP, TCP_ENABLE_ECN, (void *)&onoff, sizeof( onoff ) )  )
                 {
                     DEBUG( DEBUG_CONNECT, ctxt->debug, 1, 
-                           printErr( ctxt, 1, "DEBUG: failed to enable ECN: %d (%s)\n", errno, strerror(errno) ) )
+                           printErr( ctxt, 1, "DEBUG: failed to %s ECN: %d (%s)\n",
+                                         onoff?"enable":"disable", errno, strerror(errno) ) )
                     close( sock );
                     sock = -1;
                     ret = 1;
-                    ctxt->error = "failed to request TCPECN";
+                    ctxt->error = "failed to configure TCPECN";
                 }
                 else
-                    ctxt->ecnon = 1;
+                    ctxt->ecnon = ctxt->ecn;
             }
 #endif /* ALLOW_TCPECN */
             if (  ret == 0  )
@@ -1328,21 +1356,22 @@ clientConnect(
                     }
                 }
 #if defined( ALLOW_TCPECN )
-                ctxt->ecnon = 0;
-                if (  ctxt->ecn  )
+                if (  (ctxt->ecn == ECN_ON) || (ctxt->ecn == ECN_OFF)  )
                 {
+                    onoff = (ctxt->ecn == ECN_ON);
                     errno = 0;
                     if (  setsockopt( sock, IPPROTO_TCP, TCP_ENABLE_ECN, (void *)&onoff, sizeof( onoff ) )  )
                     {
                         DEBUG( DEBUG_CONNECT, ctxt->debug, 1,
-                               printErr( ctxt, 1, "DEBUG: failed to enable ECN: %d (%s)\n", errno, strerror(errno) ) )
+                               printErr( ctxt, 1, "DEBUG: failed to %s ECN: %d (%s)\n",
+                                         onoff?"enable":"disable", errno, strerror(errno) ) )
                         close( sock );
                         sock = -1;
                         ret = 1;
                         ctxt->error = "failed to request TCPECN";
                     }
                     else
-                        ctxt->ecnon = 1;
+                        ctxt->ecnon = ctxt->ecn;
                 }
 #endif /* ALLOW_TCPECN */
                 if (  ret == 0  )
@@ -1419,21 +1448,22 @@ clientConnect(
                     }
                 }
 #if defined( ALLOW_TCPECN )
-                ctxt->ecnon = 0;
-                if (  ctxt->ecn  )
+                if (  (ctxt->ecn == ECN_ON) || (ctxt->ecn == ECN_OFF)  )
                 {
+                    onoff = (ctxt->ecn == ECN_ON);
                     errno = 0;
                     if (  setsockopt( sock, IPPROTO_TCP, TCP_ENABLE_ECN, (void *)&onoff, sizeof( onoff ) )  )
                     {
                         DEBUG( DEBUG_CONNECT, ctxt->debug, 1,
-                               printErr( ctxt, 1, "DEBUG: failed to enable ECN: %d (%s)\n", errno, strerror(errno) ) )
+                               printErr( ctxt, 1, "DEBUG: failed to %s ECN: %d (%s)\n",
+                                         onoff?"enable":"disable", errno, strerror(errno) ) )
                         close( sock );
                         sock = -1;
                         ret = 1;
                         ctxt->error = "failed to request TCPECN";
                     }
                     else
-                        ctxt->ecnon = 1;
+                        ctxt->ecnon = ctxt->ecn;
                 }
 #endif /* ALLOW_TCPECN */
                 if (  ret == 0  )
@@ -1554,6 +1584,7 @@ handoffConn(
     int nodelay;
     int quickack;
     int ecn;
+    int ecnon;
     struct timeval rcvto = { MAX_MSG_WAIT, 0 };
     struct timeval sndto = { MAX_MSG_WAIT, 0 };
 
@@ -1572,6 +1603,7 @@ handoffConn(
     nodelay = conn->nodelay = ctxt->nodelay;
     quickack = conn->quickack = ctxt->quickack;
     ecn = conn->ecn = ctxt->ecn;
+    ecnon = conn->ecnon = ctxt->ecnon;
     if (  setsockopt( conn->rwsock, SOL_SOCKET, SO_RCVTIMEO, (void *)&rcvto, sizeof( struct timeval ) ) ||
 #if defined(ALLOW_NODELAY)
           setsockopt( conn->rwsock, IPPROTO_TCP, TCP_NODELAY, (void *)&nodelay, sizeof( nodelay ) ) ||
@@ -1821,7 +1853,7 @@ displayStats(
     printMsg( ctxt, 0, "Mode                 : %s\n", (ctxt->mode==ASYNC)?"ASYNC":"SYNC" );
     printMsg( ctxt, 0, "Message size         : %'d bytes\n", ctxt->msgsz );
     if (  ctxt->srvsbsz || ctxt->srvrbsz || ctxt->cltsbsz || ctxt->cltrbsz ||
-          ctxt->nodelay || ctxt->quickack || ctxt->ecnon  )
+          ctxt->nodelay || ctxt->quickack || (ctxt->ecnon > ECN_DFLT) )
     {
         printMsg( ctxt, 0, "Options              :" );
         if (  ctxt->srvsbsz  )
@@ -1836,8 +1868,8 @@ displayStats(
             printMsg( ctxt, 0, " nodelay" );
         if (  ctxt->quickack  )
             printMsg( ctxt, 0, " quickack" );
-        if (  ctxt->ecnon  )
-            printMsg( ctxt, 0, " tcpecn" );
+        if (  ctxt->ecnon > ECN_DFLT  )
+            printMsg( ctxt, 0, " %s", ctxt->ecnon?"tcpecn=on":"tcpecn=off" );
         printMsg( ctxt, 0, "\n" );
     }
     printMsg( ctxt, 0, "Connections          : %'d\n", ctxt->nconn );
@@ -1964,8 +1996,9 @@ cmdClient(
     socklen_t lsosndbuf;
     int sorcvbuf;
     socklen_t lsorcvbuf;
-    char * sbind;
-    char * rbind;
+    char * sbind = "";
+    char * rbind = "";
+    char * ecnval = "";
     struct timeval stout;
     struct addrinfo * srvaddr = NULL;
     socklen_t lcltaddr = 0;
@@ -2098,11 +2131,16 @@ cmdClient(
         }
 #endif /* ALLOW_BUFFSIZE */
 
+        if (  ctxt->ecnon == ECN_OFF  )
+            ecnval=", ecn=off";
+        else
+        if (  ctxt->ecnon == ECN_ON  )
+            ecnval=", ecn=on";
         printMsg( ctxt, 0, "info: connected to '" );
         printIPaddress( getStdOut(ctxt), srvaddr->ai_addr, srvaddr->ai_addrlen, 1 );
         fprintf( getStdOut( ctxt ), "' (conn = %d, %s, msgsz = %d, maxseg = %d, %ssndbsz = %d%s, %srcvbsz = %d%s%s%s%s)\n",
                  connid, (ctxt->mode==ASYNC)?"ASYNC":"SYNC", ctxt->msgsz, tcpmaxseg, sbind, sosndbuf, sbind, rbind, sorcvbuf, rbind,
-                 ctxt->nodelay?", nodelay":"", ctxt->quickack?", quickack":"", ctxt->ecnon?", ecn":"" );
+                 ctxt->nodelay?", nodelay":"", ctxt->quickack?", quickack":"", ecnval );
     }
 
     // Hand off connections to dedicated threads
@@ -2223,8 +2261,13 @@ fini:
     }
 
     // display performance metrics
-    if (  (ret == 0) && allThreadsOK( ctxt )  )
-        displayStats( ctxt );
+    if (  ret == 0  )
+    {
+        if (  allThreadsOK( ctxt )  )
+            displayStats( ctxt );
+        else
+            printMsg( ctxt, 0, "info: one or more threads encountered errors, no results available\n" );
+    }
 
     return ret;
 } // cmdClient

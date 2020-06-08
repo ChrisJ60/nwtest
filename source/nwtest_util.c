@@ -1194,7 +1194,7 @@ msgAlloc(
                 mconn->async = HTON8( thread->conn->ctxt->mode == ASYNC );
                 mconn->nodelay = HTON8( thread->conn->ctxt->nodelay );
                 mconn->quickack = HTON8( thread->conn->ctxt->quickack );
-                mconn->ecn = HTON8( thread->conn->ctxt->ecn );
+                mconn->ecn = HTON8( thread->conn->ctxt->ecnon );
                 mconn->msgsz = HTON32( (uint32)thread->conn->ctxt->msgsz );
             }
             break;
@@ -1360,6 +1360,8 @@ contextAlloc(
     c->v6only = v6only;
     c->nodelay = NODELAY_OFF;
     c->quickack = QUICKACK_OFF;
+    c->ecn = ECN_DFLT;
+    c->ecnon = ECN_DFLT;
     c->srvsbsz = srvsbsz;
     c->srvrbsz = srvrbsz;
     c->cltsbsz = cltsbsz;

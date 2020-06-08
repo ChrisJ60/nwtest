@@ -51,6 +51,12 @@ cmdHelp(
     if (  argc != 1  )
         help( HELP, 1 );
 
+#if defined(ENABLE_DEBUG)
+    if (  ( strcmp( argv[0], "debug" ) == 0 ) ||
+          ( strcmp( argv[0], "d" ) == 0 )  )
+        help( DEBUG, 0 );
+    else
+#endif /* ENABLE_DEBUG */
     if (  ( strcmp( argv[0], "info" ) == 0 ) ||
           ( strcmp( argv[0], "i" ) == 0 )  )
         help( INFO, 0 );
